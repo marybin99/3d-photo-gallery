@@ -24,7 +24,7 @@ export default function ControlsGuide({variant,onClose}:{variant:'welcome'|'comp
   const content=<section ref={panel} tabIndex={welcome?-1:undefined} className={`controls-guide controls-guide--${variant}`} role={welcome?'dialog':'region'} aria-modal={welcome?true:undefined} aria-labelledby={title} id={welcome?'welcome-controls':'compact-controls'}>
     <button className="controls-guide-close" onClick={onClose} aria-label="조작 안내 닫기">×</button>
     <div className="controls-guide-scroll">
-    {welcome&&<span className="eyebrow">WELCOME TO THE QUIET ROOM</span>}
+    {welcome&&<span className="eyebrow">WELCOME TO THE ROOM</span>}
     <h2 id={title}>전시관 이용 안내</h2>
     {welcome&&<p className="controls-guide-intro">천천히 걸으며 사진을 만나보세요.</p>}
     <div className="controls-guide-layout">

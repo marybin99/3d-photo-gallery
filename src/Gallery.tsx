@@ -165,7 +165,7 @@ export default function Gallery({onSelect,onGuestbook,pose,onPose,mobileInput,pa
     {walls.map((w,i)=><Wall key={i} position={[w.x,2.4,w.z]} args={[w.width,4.8,w.depth]}/>)}
     {doorways.map(door=><Doorway key={door.label} position={[door.x,0,door.z]} rotation={door.rotation} label={door.label}/>)}
     {artworks.map(art=><ImageFrame key={art.id} art={art} onSelect={onSelect}/>)}
-    <Text position={[4,2.8,9.8]} rotation={[0,Math.PI,0]} fontSize={.4} color="#625549">THE QUIET ROOM</Text>
+    <Text position={[4,2.8,9.8]} rotation={[0,Math.PI,0]} fontSize={.4} color="#625549">THE ROOM</Text>
     <Text position={[0,.01,6.6]} rotation={[-Math.PI/2,0,0]} fontSize={.5} color="#86735c">LOBBY</Text>
     <GuestbookDesk onOpen={onGuestbook}/>
     <Player pose={pose} onPose={onPose} mobileInput={mobileInput} paused={paused}/>

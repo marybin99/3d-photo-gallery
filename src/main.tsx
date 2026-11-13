@@ -288,7 +288,8 @@ function App() {
         </Canvas>
         <div className="top-left">
           <div className="brand">
-            THE QUIET ROOM <small>ONLINE EXHIBITION</small>
+            THE ROOM
+            <small>ONLINE EXHIBITION</small>
           </div>
           <div className="location-badge" role="status">
             현재 위치 · {currentArea.label}
@@ -309,9 +310,7 @@ function App() {
               aria-expanded={guideMode === 'compact'}
               aria-controls="compact-controls"
               onClick={() => {
-                setGuideMode((mode) =>
-                  mode === 'compact' ? null : 'compact',
-                );
+                setGuideMode((mode) => (mode === 'compact' ? null : 'compact'));
                 galleryView.current?.focus({ preventScroll: true });
               }}
             >
@@ -328,10 +327,7 @@ function App() {
         )}
         <MobileControls input={mobileInput} disabled={paused} />
         {nearBook && !paused && guideMode !== 'compact' && (
-          <button
-            className="book-interact"
-            onClick={() => setGuestbook(true)}
-          >
+          <button className="book-interact" onClick={() => setGuestbook(true)}>
             <span>펼쳐진 방명록</span>책 열기 <kbd>E</kbd>
           </button>
         )}

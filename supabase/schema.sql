@@ -7,6 +7,7 @@ create table if not exists public.guestbook_entries (
   created_at timestamptz not null default now()
 );
 alter table public.guestbook_entries enable row level security;
+drop policy if exists "Anyone can read visible notes" on public.guestbook_entries;
 create policy "Anyone can read visible notes" on public.guestbook_entries
   for select to anon, authenticated using (is_visible = true);
 -- 운영 공개 전에 아래 직접 INSERT 정책 대신 Turnstile 검증을 수행하는

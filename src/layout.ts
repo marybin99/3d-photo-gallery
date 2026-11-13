@@ -29,9 +29,9 @@ export const walls: Barrier[] = [
 ]
 export const desk: Barrier = { x: BOOK.x, z: BOOK.z, width: 2.4, depth: 1.4, height: 1.18 }
 export const doorways = [
-  { x: -8, z: 1, rotation: Math.PI/2, label: 'A · GALLERY' },
-  { x: 0, z: -6, rotation: 0, label: 'B · GALLERY' },
-  { x: 8, z: 1, rotation: -Math.PI/2, label: 'C · GALLERY' },
+  { x: -8, z: 1, rotation: Math.PI/2, label: 'A · GALLERY', zone: 'A' },
+  { x: 0, z: -6, rotation: 0, label: 'B · GALLERY', zone: 'B' },
+  { x: 8, z: 1, rotation: -Math.PI/2, label: 'C · GALLERY', zone: 'C' },
 ]
 const jambs: Barrier[] = doorways.flatMap(door=>[-1,1].map(side=>({
   x: door.x+Math.cos(door.rotation)*side*2.05,

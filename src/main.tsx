@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useRef, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Canvas } from '@react-three/fiber';
 import Gallery, { SPAWN, type Pose } from './Gallery';
@@ -8,9 +8,31 @@ import { areas, areaAt, BOOK } from './layout';
 import { demoRead, demoWrite, supabase, type GuestbookEntry } from './supabase';
 import MobileControls from './MobileControls';
 import ControlsGuide from './ControlsGuide';
+import { useArtworkCatalog } from './useArtworkCatalog';
+import { useRoomNames } from './useRoomNames';
+import { roomName, mapNameLines, type RoomNames } from './roomModel';
 import './styles.css';
+const AdminPage = lazy(() => import('./AdminPage'));
 
-function MiniMap({ pose }: { pose: Pose }) {
+function App() {
+  const [admin, setAdmin] = useState(() =>
+    window.location.hash.startsWith('#/admin'),
+  );
+  useEffect(() => {
+    const navigate = () => setAdmin(window.location.hash.startsWith('#/admin'));
+    window.addEventListener('hashchange', navigate);
+    return () => window.removeEventListener('hashchange', navigate);
+  }, []);
+  return admin ? (
+    <Suspense fallback={<p role="status">관리자 화면을 여는 중…</p>}>
+      <AdminPage />
+    </Suspense>
+  ) : (
+    <GalleryApp />
+  );
+}
+
+function MiniMap({ pose, names }: { pose: Pose; names:RoomNames }) {
   const mapX = (x: number) => 110 + x * 4;
   const mapY = (z: number) => 100 + z * 4;
   return (
@@ -20,9 +42,9 @@ function MiniMap({ pose }: { pose: Pose }) {
         <span className="live-dot" />
       </div>
       <svg
-        viewBox="0 0 220 172"
+        viewBox="0 0 220 152"
         role="img"
-        aria-label={`현재 위치: ${areaAt(pose.x, pose.z).label}`}
+        aria-label={`현재 위치: ${roomName(areaAt(pose.x, pose.z).id,names)}`}
       >
         {areas.map((area) => (
           <g key={area.id}>
@@ -40,9 +62,9 @@ function MiniMap({ pose }: { pose: Pose }) {
               y={mapY(area.z) - 7}
               textAnchor="middle"
               fill="#54483c"
-              fontSize="10"
+              fontSize="7"
             >
-              {area.id}
+              {mapNameLines(roomName(area.id,names)).map((line,index)=><tspan key={index} x={mapX(area.x)} dy={index===0?0:9}>{line}</tspan>)}
             </text>
           </g>
         ))}
@@ -71,9 +93,6 @@ function MiniMap({ pose }: { pose: Pose }) {
           <circle r="4" fill="#7e637d" stroke="white" strokeWidth="1.5" />
           <path d="M0 -9L-3 -3L3 -3Z" fill="#7e637d" />
         </g>
-        <text x="110" y="162" textAnchor="middle" fontSize="8" fill="#80766b">
-          책 아이콘 · 로비 방명록
-        </text>
       </svg>
     </div>
   );
@@ -105,27 +124,15 @@ function Guestbook({ onClose }: { onClose: () => void }) {
       canceled = true;
     };
   }, []);
-  async function submit(e: React.FormEvent) {
+  function submit(e: React.FormEvent) {
     e.preventDefault();
-    const nick = name.trim(),
-      text = message.trim();
+    if (supabase) return;
+    const nick = name.trim(), text = message.trim();
     if (!nick || !text || busy) return;
     setBusy(true);
     setError('');
     try {
-      if (supabase) {
-        const { error } = await supabase
-          .from('guestbook_entries')
-          .insert({ nickname: nick, message: text });
-        if (error) throw error;
-        const { data } = await supabase
-          .from('guestbook_entries')
-          .select('id,nickname,message,created_at')
-          .eq('is_visible', true)
-          .order('created_at', { ascending: false })
-          .limit(50);
-        setItems(data ?? []);
-      } else setItems([demoWrite(nick, text), ...items]);
+      setItems([demoWrite(nick, text), ...items]);
       setName('');
       setMessage('');
     } catch {
@@ -154,7 +161,8 @@ function Guestbook({ onClose }: { onClose: () => void }) {
             시제품 모드 · 작성한 글은 현재 브라우저에만 저장됩니다.
           </p>
         )}
-        <form onSubmit={submit}>
+        {supabase && <p className="demo-notice">방명록 글 등록을 준비하고 있습니다. 지금은 남겨진 글을 읽을 수 있어요.</p>}
+        {!supabase && <form onSubmit={submit}>
           <label>
             이름 또는 별명
             <input
@@ -179,7 +187,7 @@ function Guestbook({ onClose }: { onClose: () => void }) {
           <button className="primary" disabled={busy} type="submit">
             {busy ? '등록 중…' : '방명록 남기기'}
           </button>
-        </form>
+        </form>}
         {error && (
           <p role="alert" className="error">
             {error}
@@ -206,7 +214,9 @@ function Guestbook({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
-function App() {
+function GalleryApp() {
+  const catalog = useArtworkCatalog();
+  const rooms = useRoomNames(supabase);
   const [pose, setPose] = useState<Pose>({ ...SPAWN });
   const poseRef = useRef<Pose>({ ...SPAWN });
   const mobileInput = useRef({ forward: 0, right: 0 });
@@ -277,6 +287,8 @@ function App() {
         >
           <Suspense fallback={null}>
             <Gallery
+              artworks={catalog.items}
+              roomNames={rooms.names}
               onSelect={setSelected}
               onGuestbook={() => setGuestbook(true)}
               pose={poseRef}
@@ -292,7 +304,7 @@ function App() {
             <small>ONLINE EXHIBITION</small>
           </div>
           <div className="location-badge" role="status">
-            현재 위치 · {currentArea.label}
+            현재 위치 · {roomName(currentArea.id,rooms.names)}
             <small>
               {currentArea.id === 'LOBBY'
                 ? '펼쳐진 책을 클릭하면 방명록이 열립니다'
@@ -300,7 +312,23 @@ function App() {
             </small>
           </div>
         </div>
-        {minimap && <MiniMap pose={pose} />}
+        {(catalog.loading ||
+          catalog.error ||
+          (!catalog.demo && catalog.items.length === 0)) && (
+          <div
+            className="catalog-status"
+            role={catalog.error ? 'alert' : 'status'}
+          >
+            {catalog.error ||
+              (catalog.loading
+                ? '전시 작품을 불러오는 중…'
+                : '아직 공개된 작품이 없습니다.')}
+            {catalog.error && (
+              <button onClick={() => void catalog.reload()}>다시 시도</button>
+            )}
+          </div>
+        )}
+        {minimap && <MiniMap pose={pose} names={rooms.names} />}
         <button className="map-toggle" onClick={() => setMinimap((v) => !v)}>
           {minimap ? '지도 숨기기' : '미니맵 보기'}
         </button>
@@ -349,7 +377,7 @@ function App() {
               </button>
               <img src={selected.image} alt={selected.title} />
               <span className="eyebrow">
-                ARTWORK {selected.id} / ZONE {selected.zone}
+                ARTWORK {selected.id} / {roomName(selected.zone,rooms.names)}
               </span>
               <h2>{selected.title}</h2>
               <p>{selected.description}</p>

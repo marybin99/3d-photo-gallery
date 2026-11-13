@@ -59,10 +59,11 @@ test('the guestbook desk is solid and can be approached from the lobby', () => {
   assert.ok(Math.hypot(BOOK.x-BOOK.x,6-BOOK.z)<3.2)
 })
 
-test('each gallery contains its own four works', () => {
+test('each gallery displays four works on each of its three walls', () => {
   for (const zone of ['A','B','C']) {
     const roomWorks = artworks.filter(art=>art.zone===zone)
-    assert.equal(roomWorks.length,4)
+    assert.equal(roomWorks.length,12)
+    for (const wall of ['front','left','right']) assert.equal(roomWorks.filter(art=>art.wall===wall).length,4)
     roomWorks.forEach(art=>assert.equal(areaAt(art.position[0],art.position[2]).id,zone))
   }
 })
@@ -100,5 +101,24 @@ test('collision-resolved routes can enter and leave every room', () => {
     assert.ok(Math.hypot(result.x-target.x,result.z-target.z)<1e-6)
     const back=moveAndSlide(result.x,result.z,-target.x,1-target.z)
     assert.ok(Math.hypot(back.x,back.z-1)<1e-6)
+  }
+})
+
+
+test('frames face their gallery interior and are supported by solid walls',()=>{
+  assert.equal(new Set(artworks.map(art=>art.id)).size,artworks.length)
+  for(const art of artworks){
+    const room=areas.find(area=>area.id===art.zone)!
+    const [x,,z]=art.position
+    const nx=Math.sin(art.rotation),nz=Math.cos(art.rotation)
+    assert.ok((room.x-x)*nx+(room.z-z)*nz>0,`${art.id} must face inward`)
+    const bx=x-nx*.25,bz=z-nz*.25
+    assert.ok(walls.some(w=>Math.abs(bx-w.x)<=w.width/2+1e-7 && Math.abs(bz-w.z)<=w.depth/2+1e-7),`${art.id} must hang on a wall, not a door`)
+  }
+  for(const art of artworks){
+    for(const other of artworks){
+      if(art.id===other.id || art.zone!==other.zone || art.wall!==other.wall)continue
+      assert.ok(Math.hypot(art.position[0]-other.position[0],art.position[2]-other.position[2])>2.72,'Frames on the same wall must not overlap')
+    }
   }
 })

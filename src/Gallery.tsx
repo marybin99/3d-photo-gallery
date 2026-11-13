@@ -47,7 +47,7 @@ function ImageFrame({art,onSelect}:{art:Artwork;onSelect:(a:Artwork)=>void}) {
     </mesh>
     <mesh position={[0,-0.88,0.08]}><planeGeometry args={[1.35,0.25]}/><meshBasicMaterial color="#f8f5ed"/></mesh>
     <Text fontSize={0.115} anchorX="center" color="#51483e" position={[0,-0.88,0.09]}>{art.title}</Text>
-    <spotLight position={[0,2,1.8]} angle={0.5} penumbra={0.9} intensity={3.4} distance={5} color="#ffe8d0" target-position={[0,0,0]}/>
+    {art.wall==='front'&&<spotLight position={[0,2,1.8]} angle={0.5} penumbra={0.9} intensity={3.4} distance={5} color="#ffe8d0" target-position={[0,0,0]}/>}
   </group>
 }
 function Player({pose,onPose,mobileInput,paused}:{pose:React.RefObject<Pose>;onPose:(p:Pose)=>void;mobileInput:React.RefObject<{forward:number;right:number}>;paused:boolean}) {

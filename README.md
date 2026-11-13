@@ -72,13 +72,13 @@ Node.js 22.6+에서 `npm test`로 출입문 통과, 벽·책상·문기둥 충�
 
 Supabase 미설정 시 방명록은 현재 브라우저의 localStorage에만 저장됩니다. 다른 방문자와 공유되지 않습니다.
 
-Supabase를 연결하면 `supabase/schema.sql`로 공개 글을 조회할 수 있습니다. 연결 시 방명록은 읽기 전용으로 표시합니다. 공개 글 등록용 Edge Function과 스팸 방지 기능은 아직 구현되지 않았습니다. 작품 관리 DB/Storage와 별도 작업입니다.
+Supabase 연결 후 추가 SQL과 `guestbook-submit` Edge Function을 적용하면 방문자가 로그인 없이 별명과 글을 남길 수 있습니다. 연속 등록 제한과 중복 요청 처리를 포함하며, Cloudflare Turnstile은 선택적으로 연결할 수 있습니다. **[공개 방명록 설정 안내](docs/GUESTBOOK_SETUP.md)** 순서대로 SQL·함수·허용 주소를 적용해야 실제 등록이 동작합니다.
 
 ## 다음 구현 단계
 
 1. Supabase 프로젝트 생성, SQL 적용, 운영자 계정과 환경변수 연결, 실서비스 동작 확인
 2. 실제 사진 등록과 전시 내용 구성
-3. 방명록 Edge Function과 자동 스팸 방지, 운영자 숨김·삭제
+3. 방명록 Edge Function 배포·등록 동작 확인, 운영자 숨김·삭제 화면 추가
 4. 캐릭터 외형·추가 동작 연출 및 실기기 보행·충돌 검증 ☑️
 5. 모바일 성능 검증, Vercel 재배포와 도메인 연결
 

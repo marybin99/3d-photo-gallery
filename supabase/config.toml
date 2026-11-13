@@ -1,0 +1,4 @@
+project_id = "photo-gallery"
+
+[functions.guestbook-submit]
+verify_jwt = false

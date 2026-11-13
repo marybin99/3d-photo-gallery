@@ -4,12 +4,8 @@ const key =
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
   import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const supabase = url && key ? createClient(url, key) : null;
-export type GuestbookEntry = {
-  id: string;
-  nickname: string;
-  message: string;
-  created_at: string;
-};
+export type GuestbookEntry =
+  import('../supabase/functions/_shared/guestbook.ts').GuestbookEntry;
 const STORAGE_KEY = 'quiet-gallery-demo-guestbook';
 export function demoRead(): GuestbookEntry[] {
   try {

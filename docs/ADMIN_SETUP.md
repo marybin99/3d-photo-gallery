@@ -16,7 +16,7 @@ Supabase가 없으면 기존 데모 전시가 열리고, 관리자 주소에서�
 
 Supabase **SQL Editor → New query**에서 다음 파일 내용을 각각 붙여 넣고 실행합니다.
 
-1. [`supabase/schema.sql`](../supabase/schema.sql): 기존 방명록 조회 테이블. 실제 공개 방명록 쓰기는 별도 개발 대상입니다.
+1. [`supabase/schema.sql`](../supabase/schema.sql): 기존 방명록 조회 테이블.
 2. [`supabase/artwork-management.sql`](../supabase/artwork-management.sql): 운영자 목록, 작품 테이블, 권한 함수, RLS 정책, 비공개 이미지 버킷.
 3. [`supabase/room-names.sql`](../supabase/room-names.sql): 전시실 이름 테이블과 운영자 이름 수정 권한.
 
@@ -32,6 +32,8 @@ Supabase **SQL Editor → New query**에서 다음 파일 내용을 각각 붙�
 | `gallery-artworks` | JPEG/PNG/WebP만 허용하는 비공개 Storage 버킷 |
 
 방문자는 공개 작품만 조회할 수 있고, DB/Storage 쓰기는 운영자만 허용됩니다. 동일한 액자 위치에는 한 작품만 등록할 수 있습니다.
+
+공개 방명록 등록은 추가 SQL과 Edge Function 배포가 필요합니다. [방명록 연결 안내](GUESTBOOK_SETUP.md)를 참고하세요.
 
 ## 3. 운영자 계정 생성과 권한 부여
 
@@ -117,4 +119,4 @@ Supabase 프로젝트가 아직 없어 실서비스 Auth/DB/Storage 연동은 �
 
 ## 이번 작업에 포함되지 않은 것
 
-공개 방명록 등록용 Edge Function, 방명록 숨김·삭제, 앱 내 회원가입·비밀번호 재설정·MFA, 원본 사진 보관은 별도 구현 대상입니다. 운영자 비밀번호 관리는 현재 Supabase Dashboard에서 수행합니다.
+방명록 숨김·삭제 화면, 앱 내 회원가입·비밀번호 재설정·MFA, 원본 사진 보관은 별도 구현 대상입니다. 공개 방명록 등록용 Edge Function은 구현되어 있으며 별도 설정 안내에 따라 배포해야 합니다. 운영자 비밀번호 관리는 현재 Supabase Dashboard에서 수행합니다.

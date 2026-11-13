@@ -1033,4 +1033,40 @@ main,
   }
 }
 
-.location-badge{overflow-wrap:anywhere}
+.location-badge {
+  overflow-wrap: anywhere;
+}
+
+.guestbook-honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.guestbook-write-hint {
+  font-size: 10px;
+  line-height: 1.7;
+  color: #8d7c69;
+  margin: 0;
+}
+.guestbook-success {
+  padding: 10px 12px;
+  border-radius: 4px;
+  background: #e6ecdf;
+  color: #4e6541;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.guestbook-verification {
+  min-height: 65px;
+}
+.guestbook .error button {
+  border: 0;
+  background: transparent;
+  text-decoration: underline;
+  color: inherit;
+  cursor: pointer;
+  font-size: 11px;
+}

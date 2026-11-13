@@ -297,6 +297,7 @@
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 .admin-page .admin-delete {
   margin-top: 24px;
@@ -304,17 +305,29 @@
   border-color: #d5aa9c;
   background: transparent;
 }
-.admin-delete-confirm {
-  margin-top: 22px;
-  padding: 15px;
-  border: 1px solid #dcafa0;
-  background: #faeee6;
-  border-radius: 5px;
+.admin-delete-dialog {
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  margin: auto;
+  padding: 26px;
+  border: 1px solid #d4c5b4;
+  border-radius: 10px;
+  background: #faf7f0;
+  color: #4b4037;
+  box-shadow: 0 20px 70px #251b1840;
 }
-.admin-delete-confirm p {
-  font-size: 12px;
-  line-height: 1.8;
-  margin: 0 0 13px;
+.admin-delete-dialog::backdrop {
+  background: #251b1880;
+}
+.admin-delete-dialog p {
+  font-size: 13px;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+  margin: 0 0 22px;
+}
+.admin-delete-dialog .admin-actions {
+  justify-content: flex-end;
 }
 @media (max-width: 760px) {
   .admin-page {
@@ -355,10 +368,100 @@
   }
 }
 
-.admin-room-settings{margin-top:24px;margin-bottom:10px}
-.admin-room-settings h2{margin-bottom:10px}
-.admin-room-forms{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:18px}
-.admin-room-forms form{display:flex;align-items:flex-end;gap:8px;min-width:0}
-.admin-room-forms label{flex:1;min-width:0}
-.admin-room-forms button{white-space:nowrap;flex-shrink:0}
-@media(max-width:950px){.admin-room-forms{grid-template-columns:1fr;gap:14px}}
+.admin-room-settings {
+  margin-top: 24px;
+  margin-bottom: 10px;
+}
+.admin-room-settings h2 {
+  margin-bottom: 10px;
+}
+.admin-room-forms {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+.admin-room-forms form {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+.admin-room-forms label {
+  flex: 1;
+  min-width: 0;
+}
+.admin-room-forms button {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+@media (max-width: 950px) {
+  .admin-room-forms {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+.admin-navigation {
+  max-width: 1180px;
+  margin: 22px auto;
+  display: flex;
+  gap: 10px;
+}
+.admin-navigation a[aria-current='page'] {
+  background: #594b3f;
+  border-color: #594b3f;
+  color: white;
+}
+.admin-guestbook-list {
+  display: grid;
+  margin-top: 20px;
+}
+.admin-guestbook-entry {
+  padding: 22px 0;
+  border-top: 1px solid #ded2c4;
+  min-width: 0;
+}
+.admin-guestbook-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 13px;
+}
+.admin-guestbook-meta strong {
+  overflow-wrap: anywhere;
+}
+.admin-guestbook-meta time {
+  font-size: 11px;
+  color: #8c7762;
+  margin-left: auto;
+}
+.admin-guestbook-badge {
+  background: #e6ecdf;
+  color: #4d633f;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+.admin-guestbook-badge.is-hidden {
+  background: #eae2d7;
+  color: #75604e;
+}
+.admin-guestbook-message {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.9;
+  margin: 16px 0;
+}
+.admin-guestbook-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 18px;
+  border-top: 1px solid #ded2c4;
+  font-size: 12px;
+}

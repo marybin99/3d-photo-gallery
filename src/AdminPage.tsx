@@ -22,6 +22,8 @@ import { prepareArtworkImage } from './prepareArtworkImage';
 import { useRoomNames } from './useRoomNames';
 import { roomName } from './roomModel';
 import RoomSettings from './RoomSettings';
+import AdminGuestbook from './AdminGuestbook';
+import DeleteConfirmDialog from './DeleteConfirmDialog';
 import './admin.css';
 
 const emptyDraft: ArtworkDraft = {
@@ -168,11 +170,54 @@ function AdminSession({ client }: { client: SupabaseClient }) {
           {auth.error}
         </p>
       )}
-      <ArtworkDashboard
+      <AdminDashboard
         key={auth.session.user.id}
         client={client}
         userId={auth.session.user.id}
       />
+    </>
+  );
+}
+function AdminDashboard({
+  client,
+  userId,
+}: {
+  client: SupabaseClient;
+  userId: string;
+}) {
+  const [section, setSection] = useState(() =>
+    window.location.hash.replace(/\/$/, '') === '#/admin/guestbook' ? 'guestbook' : 'artworks',
+  );
+  useEffect(() => {
+    const navigate = () => setSection(
+      window.location.hash.replace(/\/$/, '') === '#/admin/guestbook' ? 'guestbook' : 'artworks',
+    );
+    navigate();
+    window.addEventListener('hashchange', navigate);
+    return () => window.removeEventListener('hashchange', navigate);
+  }, []);
+  return (
+    <>
+      <nav className="admin-navigation" aria-label="관리 메뉴">
+        <a
+          className="admin-button"
+          href="#/admin/artworks"
+          aria-current={section === 'artworks' ? 'page' : undefined}
+        >
+          작품 관리
+        </a>
+        <a
+          className="admin-button"
+          href="#/admin/guestbook"
+          aria-current={section === 'guestbook' ? 'page' : undefined}
+        >
+          방명록 관리
+        </a>
+      </nav>
+      <div hidden={section !== 'artworks'}>
+        <ArtworkDashboard client={client} userId={userId} />
+      </div>
+      {section === 'guestbook' && <AdminGuestbook client={client} />}
     </>
   );
 }
@@ -337,7 +382,7 @@ function ArtworkDashboard({
           전시관 보기 ↗
         </a>
       </div>
-      <RoomSettings rooms={rooms}/>
+      <RoomSettings rooms={rooms} />
       <div className="admin-summary">
         <span>
           등록 <b>{records.length} / 36</b>
@@ -374,9 +419,13 @@ function ArtworkDashboard({
               onClick={() => {
                 const slotId = clearForm();
                 setError('');
-                setNotice(slotId ? '' : filter === 'ALL'
-                  ? '모든 전시 위치가 사용 중입니다.'
-                  : `${roomName(filter,rooms.names)}에 비어 있는 전시 위치가 없습니다. 다른 전시실을 선택해 주세요.`);
+                setNotice(
+                  slotId
+                    ? ''
+                    : filter === 'ALL'
+                      ? '모든 전시 위치가 사용 중입니다.'
+                      : `${roomName(filter, rooms.names)}에 비어 있는 전시 위치가 없습니다. 다른 전시실을 선택해 주세요.`,
+                );
               }}
             >
               + 새 작품
@@ -391,7 +440,7 @@ function ArtworkDashboard({
               <option value="ALL">전체 전시실</option>
               {['A', 'B', 'C'].map((zone) => (
                 <option key={zone} value={zone}>
-                  {roomName(zone,rooms.names)}
+                  {roomName(zone, rooms.names)}
                 </option>
               ))}
             </select>
@@ -414,7 +463,7 @@ function ArtworkDashboard({
                 <img src={urls.get(record.image_path)} alt="" loading="lazy" />
                 <span>
                   <strong>{record.title}</strong>
-                  <small>{slotLabel(record.slot_id,rooms.names)}</small>
+                  <small>{slotLabel(record.slot_id, rooms.names)}</small>
                   <em>{record.is_published ? '공개' : '비공개'}</em>
                 </span>
               </button>
@@ -438,7 +487,10 @@ function ArtworkDashboard({
                     빈 전시 위치를 선택하세요
                   </option>
                   {['A', 'B', 'C'].map((zone) => (
-                    <optgroup key={zone} label={`${roomName(zone,rooms.names)}`}>
+                    <optgroup
+                      key={zone}
+                      label={`${roomName(zone, rooms.names)}`}
+                    >
                       {slots
                         .filter((slot) => slot.zone === zone)
                         .map((slot) => {
@@ -453,7 +505,7 @@ function ArtworkDashboard({
                               value={slot.id}
                               disabled={occupied}
                             >
-                              {slotLabel(slot.id,rooms.names)}
+                              {slotLabel(slot.id, rooms.names)}
                               {occupied ? ' · 사용 중' : ''}
                             </option>
                           );
@@ -542,30 +594,20 @@ function ArtworkDashboard({
             <button
               className="admin-delete"
               disabled={busy || loading}
-              onClick={() => setConfirmDelete(true)}
+              onClick={() => { setError(''); setConfirmDelete(true); }}
             >
               이 작품 삭제
             </button>
           )}
           {editing && confirmDelete && (
-            <div className="admin-delete-confirm" role="alert">
-              <p>
-                ‘{editing.title}’ 작품과 사진 파일을 삭제할까요? 삭제하면 복구할
-                수 없습니다.
-              </p>
-              <div className="admin-actions">
-                <button
-                  className="admin-danger"
-                  disabled={busy || loading}
-                  onClick={() => void remove()}
-                >
-                  삭제하기
-                </button>
-                <button disabled={busy} onClick={() => setConfirmDelete(false)}>
-                  취소
-                </button>
-              </div>
-            </div>
+            <DeleteConfirmDialog
+              busy={busy}
+              error={error}
+              onCancel={() => setConfirmDelete(false)}
+              onConfirm={() => void remove()}
+            >
+              ‘{editing.title}’ 작품과 사진 파일을 삭제합니다. 삭제하면 복구할 수 없습니다.
+            </DeleteConfirmDialog>
           )}
         </section>
       </div>

@@ -75,7 +75,7 @@ Supabase 호스팅 환경의 `SUPABASE_URL`과 `SUPABASE_SERVICE_ROLE_KEY`를 �
 - `500`: SQL 적용과 함수의 서버 키 설정을 확인합니다. `submit_guestbook`는 `service_role`만 실행할 수 있습니다.
 - 방문자 인증 오류: site key·secret key가 같은 위젯의 키인지, 실제 호스트가 등록되어 있는지 확인합니다.
 
-관리자 방명록 숨김/삭제 UI는 별도 작업입니다. 현재는 Supabase Table Editor에서 `is_visible=false`로 바꿔 글을 숨길 수 있습니다.
+관리자 화면의 **방명록 관리**에서 글을 숨기거나 다시 공개하고 삭제할 수 있습니다. 추가 DB 권한 설정은 [관리자 설정 안내의 방명록 관리 연결](ADMIN_SETUP.md#방명록-관리-연결)을 참고하세요.
 
 ## 검증 범위
 

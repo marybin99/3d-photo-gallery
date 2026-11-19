@@ -50,9 +50,10 @@ export function createArtworkRepository(client: SupabaseClient, availableSlots =
       return data ?? [];
     },
     async imageUrls(records: ArtworkRecord[]): Promise<Map<string, string>> {
-      if (!records.length) return new Map();
+      const paths=records.flatMap(row=>row.image_path?[row.image_path]:[]);
+      if (!paths.length) return new Map();
       const { data, error } = await bucket.createSignedUrls(
-        records.map((row) => row.image_path),
+        paths,
         SIGNED_URL_SECONDS,
       );
       if (error || !data)
@@ -76,9 +77,10 @@ export function createArtworkRepository(client: SupabaseClient, availableSlots =
       image: Blob | null,
     ) {
       const values = validateDraft(draft, availableSlots);
-      if (!current && !image) throw new Error('등록할 사진을 선택해 주세요.');
+      const isVideo=!!values.youtube_url;
+      if (!isVideo && !image && !current?.image_path) throw new Error('등록할 사진을 선택해 주세요.');
       let uploaded: string | null = null;
-      if (image) {
+      if (image && !isVideo) {
         const extension = {
           'image/webp': 'webp',
           'image/jpeg': 'jpg',
@@ -98,7 +100,7 @@ export function createArtworkRepository(client: SupabaseClient, availableSlots =
       }
       const payload = {
         ...values,
-        image_path: uploaded ?? current!.image_path,
+        image_path: isVideo ? null : uploaded ?? current!.image_path,
       };
       try {
         const query = current
@@ -115,7 +117,7 @@ export function createArtworkRepository(client: SupabaseClient, availableSlots =
             '다른 곳에서 작품이 수정되었습니다. 목록을 새로고침해 주세요.',
           );
         const warning =
-          uploaded && current ? await removeImage(current.image_path) : '';
+          current?.image_path && current.image_path!==payload.image_path ? await removeImage(current.image_path) : '';
         return { record: data as ArtworkRecord, warning };
       } catch (error) {
         if (uploaded) {
@@ -141,7 +143,7 @@ export function createArtworkRepository(client: SupabaseClient, availableSlots =
         throw new Error(
           '다른 곳에서 작품이 수정되었습니다. 목록을 새로고침해 주세요.',
         );
-      return { warning: await removeImage(record.image_path) };
+      return { warning: record.image_path ? await removeImage(record.image_path) : '' };
     },
   };
 }

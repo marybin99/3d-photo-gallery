@@ -17,6 +17,7 @@ import {
   type ArtworkDraft,
   type ArtworkRecord,
 } from './artworkModel';
+import { youtubeVideoId, youtubeThumbnail } from './youtubeModel';
 import { artworkSlots } from './data';
 import { prepareArtworkImage } from './prepareArtworkImage';
 import { useRoomNames } from './useRoomNames';
@@ -28,6 +29,7 @@ import './admin.css';
 
 const emptyDraft: ArtworkDraft = {
   slot_id: '',
+  youtube_url: '',
   title: '',
   description: '',
   is_published: false,
@@ -241,6 +243,7 @@ function ArtworkDashboard({
     [notice, setNotice] = useState('');
   const [editing, setEditing] = useState<ArtworkRecord | null>(null),
     [draft, setDraft] = useState({ ...emptyDraft });
+  const [mediaType,setMediaType]=useState<'image'|'youtube'>('image');
   const [file, setFile] = useState<File | null>(null),
     [preview, setPreview] = useState('');
   const [filter, setFilter] = useState('ALL'),
@@ -304,6 +307,7 @@ function ArtworkDashboard({
   }, [file]);
   const clearForm = (items = records) => {
     setEditing(null);
+    setMediaType('image');
     setFile(null);
     setConfirmDelete(false);
     const slotId = firstAvailableSlot(items, filter, slots);
@@ -313,7 +317,9 @@ function ArtworkDashboard({
   };
   const edit = (record: ArtworkRecord) => {
     setEditing(record);
+    setMediaType(record.youtube_url?'youtube':'image');
     setDraft({
+      youtube_url: record.youtube_url ?? '',
       slot_id: record.slot_id,
       title: record.title,
       description: record.description,
@@ -334,8 +340,9 @@ function ArtworkDashboard({
     setNotice('');
     setConfirmDelete(false);
     try {
-      const image = file ? await prepareArtworkImage(file) : null;
-      const result = await repository.save(userId, draft, editing, image);
+      if(mediaType==='youtube'&&!draft.youtube_url?.trim())throw new Error('유튜브 링크를 입력해 주세요.');
+      const image = mediaType==='image'&&file ? await prepareArtworkImage(file) : null;
+      const result = await repository.save(userId, {...draft,youtube_url:mediaType==='youtube'?draft.youtube_url:''}, editing, image);
       if (!mounted.current) return;
       const next = [
         ...records.filter((record) => record.id !== result.record.id),
@@ -367,7 +374,7 @@ function ArtworkDashboard({
       const next = records.filter((record) => record.id !== editing.id);
       setRecords(next);
       clearForm(next);
-      setNotice(result.warning || '작품과 사진을 삭제했습니다.');
+      setNotice(result.warning || '작품을 삭제했습니다.');
       await load();
     } catch (reason) {
       if (mounted.current) setError(messageOf(reason));
@@ -376,7 +383,10 @@ function ArtworkDashboard({
       if (mounted.current) setBusy(false);
     }
   }
-  const currentImage = preview || (editing ? urls.get(editing.image_path) : '');
+  let videoPreview='';
+  try{if(draft.youtube_url)videoPreview=youtubeThumbnail(youtubeVideoId(draft.youtube_url))}catch{/* Show a hint until the URL is complete. */}
+  const currentImage = mediaType==='youtube'?videoPreview:preview || (editing?.image_path ? urls.get(editing.image_path) : '');
+  const recordImage=(record:ArtworkRecord)=>record.youtube_url?youtubeThumbnail(youtubeVideoId(record.youtube_url)):record.image_path?urls.get(record.image_path):'';
   const visible = records.filter(
     (record) =>
       filter === 'ALL' ||
@@ -472,11 +482,11 @@ function ArtworkDashboard({
                 disabled={busy || loading}
                 onClick={() => edit(record)}
               >
-                <img src={urls.get(record.image_path)} alt="" loading="lazy" />
+                <img src={recordImage(record)} alt="" loading="lazy" />
                 <span>
                   <strong>{record.title}</strong>
                   <small>{slotLabel(record.slot_id, rooms.names, slots)}</small>
-                  <em>{record.is_published ? '공개' : '비공개'}</em>
+                  <em>{record.youtube_url?'영상 · ':''}{record.is_published ? '공개' : '비공개'}</em>
                 </span>
               </button>
             ))}
@@ -526,13 +536,22 @@ function ArtworkDashboard({
                   ))}
                 </select>
               </label>
-              <label>
+              <label>작품 유형
+                <select value={mediaType} onChange={event=>{
+                  setMediaType(event.target.value as 'image'|'youtube');setFile(null);
+                  setDraft({...draft,youtube_url:''});if(fileInput.current)fileInput.current.value='';
+                }}><option value="image">사진</option><option value="youtube">유튜브 영상</option></select>
+              </label>
+              {mediaType==='youtube'?<>
+                <label>유튜브 링크<input type="url" value={draft.youtube_url??''} onChange={event=>setDraft({...draft,youtube_url:event.target.value})} required maxLength={2048} placeholder="https://www.youtube.com/watch?v=…"/></label>
+                <p className="admin-help">전시관에 입장하면 표시되는 영상이 음소거로 자동 재생됩니다. 영상 업로드는 필요하지 않습니다.</p>
+              </>:<><label>
                 사진 {editing ? '교체 (선택)' : '파일'}
                 <input
                   ref={fileInput}
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
-                  required={!editing}
+                  required={!editing || !!editing.youtube_url}
                   onChange={(event) => {
                     const next = event.target.files?.[0] ?? null;
                     try {
@@ -549,12 +568,12 @@ function ArtworkDashboard({
               </label>
               <p className="admin-help">
                 JPG·PNG·WebP, 최대 10MB. 긴 변 1,920px 이내로 조정해 저장합니다.
-              </p>
+              </p></>}
               <div className="admin-image-preview">
                 {currentImage ? (
                   <img src={currentImage} alt="선택한 작품 미리보기" />
                 ) : (
-                  <span>사진을 선택하면 미리보기가 표시됩니다.</span>
+                  <span>{mediaType==='youtube'?'유튜브 링크를 입력하면 썸네일이 표시됩니다.':'사진을 선택하면 미리보기가 표시됩니다.'}</span>
                 )}
               </div>
               <label>
@@ -618,7 +637,7 @@ function ArtworkDashboard({
               onCancel={() => setConfirmDelete(false)}
               onConfirm={() => void remove()}
             >
-              ‘{editing.title}’ 작품과 사진 파일을 삭제합니다. 삭제하면 복구할 수 없습니다.
+              ‘{editing.title}’ 작품{editing.youtube_url?'의 영상 연결':'과 사진 파일'}을 삭제합니다. 삭제하면 복구할 수 없습니다.
             </DeleteConfirmDialog>
           )}
         </section>

@@ -1,5 +1,5 @@
 import { additionalRoomAreas } from './layout.ts'
-export type Artwork = { id: string; title: string; description: string; image: string; position: [number,number,number]; rotation: number; zone: string; wall: 'front' | 'left' | 'right' }
+export type Artwork = { id: string; title: string; description: string; image: string; youtubeId?: string; position: [number,number,number]; rotation: number; zone: string; wall: 'front' | 'left' | 'right' }
 const frontArtworks: Artwork[] = [
   {id:'01', title:'오후의 바람', description:'멀리 떠나지 않아도 만날 수 있는 풍경.', image:'/artworks/01.svg', position:[-23.75,2.1,-3.8],rotation:Math.PI/2,zone:'A',wall:'front'},
   {id:'02', title:'천천히 걷는 날', description:'어느 골목에서 발견한 작은 평온.', image:'/artworks/02.svg', position:[-23.75,2.1,0],rotation:Math.PI/2,zone:'A',wall:'front'},

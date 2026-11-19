@@ -13,6 +13,7 @@ import { useArtworkCatalog } from './useArtworkCatalog';
 import { useRoomNames } from './useRoomNames';
 import { roomName } from './roomModel';
 import MiniMap from './MiniMap';
+import YouTubePlayer from './YouTubePlayer';
 import './styles.css';
 const AdminPage = lazy(() => import('./AdminPage'));
 
@@ -114,6 +115,8 @@ function GalleryApp() {
       <div className="gallery-view" data-expanded-wing={rooms.ids.length>3} ref={galleryView} tabIndex={-1}>
         <Canvas
           shadows
+          gl={{ alpha: true }}
+          style={{ isolation: 'isolate' }}
           dpr={[1, 1.7]}
           camera={{ position: followCameraPosition(SPAWN), fov: 64 }}
         >
@@ -129,6 +132,7 @@ function GalleryApp() {
               onPose={setPose}
               mobileInput={mobileInput}
               paused={paused}
+              videoPaused={selected!==null||guestbook}
             />
           </Suspense>
         </Canvas>
@@ -223,7 +227,7 @@ function GalleryApp() {
               >
                 ×
               </button>
-              <img src={selected.image} alt={selected.title} />
+              {selected.youtubeId?<YouTubePlayer videoId={selected.youtubeId} title={selected.title} controls={true}/>:<img src={selected.image} alt={selected.title} />}
               <span className="eyebrow">
                 ARTWORK {selected.id} / {roomName(selected.zone, rooms.names)}
               </span>

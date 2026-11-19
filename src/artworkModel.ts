@@ -1,3 +1,4 @@
+import { normalizeYoutubeUrl, youtubeVideoId, youtubeThumbnail } from './youtubeModel.ts';
 import { artworks, type Artwork } from './data.ts';
 import { roomName, defaultRoomNames, type RoomNames } from './roomModel.ts';
 
@@ -6,12 +7,14 @@ export type ArtworkRecord = {
   slot_id: string;
   title: string;
   description: string;
-  image_path: string;
+  image_path: string | null;
+  youtube_url?: string | null;
   is_published: boolean;
   created_at: string;
   updated_at: string;
 };
 export type ArtworkDraft = {
+  youtube_url?: string;
   slot_id: string;
   title: string;
   description: string;
@@ -20,7 +23,7 @@ export type ArtworkDraft = {
 export const slots = artworks;
 export const ARTWORK_BUCKET = 'gallery-artworks';
 export const ARTWORK_COLUMNS =
-  'id,slot_id,title,description,image_path,is_published,created_at,updated_at';
+  'id,slot_id,title,description,image_path,youtube_url,is_published,created_at,updated_at';
 export const MAX_SOURCE_BYTES = 10 * 1024 * 1024;
 export const MAX_IMAGE_EDGE = 1920;
 export const SIGNED_URL_SECONDS = 3600;
@@ -55,6 +58,7 @@ export function validateDraft(draft: ArtworkDraft, availableSlots = slots) {
     throw new Error('작품 설명은 2,000자 이내로 입력해 주세요.');
   return {
     ...draft,
+    youtube_url: draft.youtube_url?.trim() ? normalizeYoutubeUrl(draft.youtube_url) : null,
     title: draft.title.trim(),
     description: draft.description.trim(),
   };
@@ -81,6 +85,7 @@ export function recordToArtwork(record: ArtworkRecord, image: string, availableS
     ...slot,
     title: record.title,
     description: record.description,
-    image,
+    image: record.youtube_url ? youtubeThumbnail(youtubeVideoId(record.youtube_url)) : image,
+    youtubeId: record.youtube_url ? youtubeVideoId(record.youtube_url) : undefined,
   };
 }

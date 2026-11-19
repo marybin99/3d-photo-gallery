@@ -25,9 +25,9 @@ export function useArtworkCatalog(availableSlots = artworks) {
       const records = (await repository.list(true)).filter(record=>availableIds.has(record.slot_id));
       const urls = await repository.imageUrls(records);
       const next = records.map((record) => {
-        const url = urls.get(record.image_path);
-        if (!url) throw new Error('사진 주소를 불러오지 못했습니다.');
-        return recordToArtwork(record, url, availableSlots);
+        const url = record.image_path ? urls.get(record.image_path) : '';
+        if (!record.youtube_url && !url) throw new Error('사진 주소를 불러오지 못했습니다.');
+        return recordToArtwork(record, url ?? '', availableSlots);
       });
       if (current === request.current) setItems(next);
     } catch {

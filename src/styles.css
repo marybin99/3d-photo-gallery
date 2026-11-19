@@ -1132,3 +1132,38 @@ main,
     top: calc(90px + min(210px, 32dvh));
   }
 }
+
+.youtube-player {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 200px;
+  background: #171512;
+  color: #fff7ea;
+}
+.youtube-player-host {
+  position: absolute;
+  inset: 0;
+}
+.youtube-player iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.youtube-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  text-align: center;
+  font-size: 14px;
+}
+.youtube-error a { color: #efd4a5; }
+.artwork-video-screen { width: 640px; height: 360px; pointer-events: none; user-select: none; }
+.artwork-video-screen iframe { pointer-events: none; }
+.artwork-video-screen .youtube-player { height: 100%; }
+.art-detail .youtube-player { margin-bottom: 20px; }

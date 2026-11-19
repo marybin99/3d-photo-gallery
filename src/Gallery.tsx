@@ -1,9 +1,10 @@
 import { useFrame, useThree } from '@react-three/fiber';
-import { Text } from '@react-three/drei';
+import { Html, Text } from '@react-three/drei';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { type Artwork } from './data';
 import ArtworkImage from './ArtworkImage';
+import YouTubePlayer from './YouTubePlayer';
 import ClosedRoomCurtain from './ClosedRoomCurtain';
 import { fillArtworkSlots } from './artworkModel';
 import { roomName, type RoomNames } from './roomModel';
@@ -93,10 +94,15 @@ function Wall({
 function ImageFrame({
   art,
   onSelect,
+  playing,
 }: {
   art: Artwork;
   onSelect: (a: Artwork) => void;
+  playing: boolean;
 }) {
+  const isVideo=!!art.youtubeId;
+  const frameHeight=isVideo?1.17875:1.52;
+  const labelY=isVideo?-.73:-.88;
   return (
     <group
       position={art.position}
@@ -110,15 +116,21 @@ function ImageFrame({
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
       <mesh position={[0, 0, 0]} castShadow>
-        <boxGeometry args={[1.94, 1.52, 0.11]} />
+        <boxGeometry args={[1.94, frameHeight, 0.11]} />
         <meshStandardMaterial color="#806d59" roughness={0.65} />
       </mesh>
       <mesh position={[0, 0, 0.064]}>
-        <planeGeometry args={[1.74, 1.32]} />
+        <planeGeometry args={isVideo?[1.82,1.05875]:[1.74,1.32]} />
         <meshBasicMaterial color="#fdfbf8" />
       </mesh>
-      {art.image && <ArtworkImage url={art.image} />}
-      <mesh position={[0, -0.88, 0.08]}>
+      {art.image && <ArtworkImage url={art.image} width={isVideo?1.74:1.62} height={isVideo?.97875:1.2} />}
+      {art.youtubeId&&!playing&&<Text position={[0,0,.09]} fontSize={.3} color="white">▶</Text>}
+      {/* Blend the video through a depth-tested opening in the canvas so the
+          character and other foreground geometry remain in front of it. */}
+      {art.youtubeId&&playing&&<Html transform position={[0,0,.1]} distanceFactor={1.0875} pointerEvents="none" occlude="blending" zIndexRange={[2,0]}>
+        <div className="artwork-video-screen"><YouTubePlayer videoId={art.youtubeId} title={art.title} controls={false}/></div>
+      </Html>}
+      <mesh position={[0, labelY, 0.08]}>
         <planeGeometry args={[1.35, 0.25]} />
         <meshBasicMaterial color="#f8f5ed" />
       </mesh>
@@ -126,7 +138,7 @@ function ImageFrame({
         fontSize={0.115}
         anchorX="center"
         color="#51483e"
-        position={[0, -0.88, 0.09]}
+        position={[0, labelY, 0.09]}
       >
         {art.title}
       </Text>
@@ -166,16 +178,21 @@ function Player({
   const velocity = useRef({ x: 0, z: 0 });
   const lastPose = useRef(pose.current);
   const cameraReady = useRef(false);
-  const { camera, gl } = useThree();
+  const { camera, gl, events } = useThree();
+  const lookSurface = events.connected instanceof HTMLElement
+    ? events.connected
+    : gl.domElement.parentElement ?? gl.domElement;
   const pitch = useRef(DEFAULT_PITCH);
   useEffect(() => {
     if (paused) return;
-    return bindMouseLook(gl.domElement, (dx, dy) => {
+    // HTML video depth blending disables pointer events on the canvas itself.
+    // Its stable event container continues receiving drags during playback.
+    return bindMouseLook(lookSurface, (dx, dy) => {
       const look = mouseLook(pose.current.yaw, pitch.current, dx, dy);
       pose.current.yaw = look.yaw;
       pitch.current = look.pitch;
     });
-  }, [gl, paused, pose]);
+  }, [lookSurface, paused, pose]);
   const broadcast = useRef(0);
   const keys = useKeyboard(!paused);
   const target = useMemo(() => new THREE.Vector3(), []);
@@ -410,6 +427,7 @@ export default function Gallery({
   onPose,
   mobileInput,
   paused,
+  videoPaused=paused,
   layout,
 }: {
   artworks: Artwork[];
@@ -421,6 +439,7 @@ export default function Gallery({
   onPose: (p: Pose) => void;
   mobileInput: React.RefObject<{ forward: number; right: number }>;
   paused: boolean;
+  videoPaused?: boolean;
   layout: GalleryLayout;
 }) {
   // Keep the shader light count bounded as the connected wing grows.
@@ -482,7 +501,7 @@ export default function Gallery({
         />
       ))}
       {fillArtworkSlots(artworks, slots).filter(art=>nearbyAreas.has(art.zone)).map((art) => (
-        <ImageFrame key={art.id} art={art} onSelect={onSelect} />
+        <ImageFrame key={art.id} art={art} onSelect={onSelect} playing={!videoPaused} />
       ))}
       <Text
         position={[4, 2.8, 9.8]}

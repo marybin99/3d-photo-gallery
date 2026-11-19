@@ -485,3 +485,30 @@
 @media (min-width: 951px) {
   .admin-room-forms { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+.admin-room-item {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #e2d6c8;
+  border-radius: 8px;
+  background: #fcf9f3;
+}
+.admin-room-forms .admin-room-toggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 14px 0 0;
+  font-size: 12px;
+  color: #78624d;
+}
+.admin-room-toggle input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: #657451;
+}
+@media (max-width: 420px) {
+  .admin-room-item { padding: 12px; }
+  .admin-room-item form { flex-wrap: wrap; }
+  .admin-room-item form label { flex-basis: 100%; }
+}

@@ -38,8 +38,10 @@ function GalleryApp() {
   const rooms = useRoomNames(supabase);
   const roomKey = rooms.ids.join(',');
   const slots = useMemo(()=>artworkSlots(roomKey.split(',')),[roomKey]);
-  const layout = useMemo(()=>createGalleryLayout(roomKey.split(',')),[roomKey]);
-  const catalog = useArtworkCatalog(slots);
+  const openKey=rooms.openIds.join(',');
+  const layout = useMemo(()=>createGalleryLayout(roomKey.split(','),roomKey.split(',').filter(id=>!openKey.split(',').includes(id))),[roomKey,openKey]);
+  const openSlots=useMemo(()=>slots.filter(slot=>openKey.split(',').includes(slot.zone)),[slots,openKey]);
+  const catalog = useArtworkCatalog(openSlots);
   const [pose, setPose] = useState<Pose>({ ...SPAWN });
   const poseRef = useRef<Pose>({ ...SPAWN });
   const previousLayout = useRef(layout);
@@ -51,7 +53,7 @@ function GalleryApp() {
   const mobileInput = useRef({ forward: 0, right: 0 });
   const [selected, setSelected] = useState<Artwork | null>(null);
   const [guestbook, setGuestbook] = useState(false);
-  useEffect(()=>{setSelected(art=>art&&slots.some(slot=>slot.id===art.id)?art:null)},[slots]);
+  useEffect(()=>{setSelected(art=>art&&openSlots.some(slot=>slot.id===art.id)?art:null)},[openSlots]);
   const [guideMode, setGuideMode] = useState<'welcome' | 'compact' | null>(
     'welcome',
   );
@@ -121,7 +123,7 @@ function GalleryApp() {
               roomNames={rooms.names}
               slots={slots}
               layout={layout}
-              onSelect={setSelected}
+              onSelect={art=>{if(rooms.openIds.includes(art.zone))setSelected(art)}}
               onGuestbook={() => setGuestbook(true)}
               pose={poseRef}
               onPose={setPose}
@@ -144,19 +146,19 @@ function GalleryApp() {
             </small>
           </div>
         </div>
-        {(catalog.loading ||
+        {(rooms.loading || rooms.error || catalog.loading ||
           catalog.error ||
           (!catalog.demo && catalog.items.length === 0)) && (
           <div
             className="catalog-status"
-            role={catalog.error ? 'alert' : 'status'}
+            role={rooms.error || catalog.error ? 'alert' : 'status'}
           >
-            {catalog.error ||
-              (catalog.loading
+            {rooms.error || catalog.error ||
+              (rooms.loading ? '전시실 오픈 정보를 확인하는 중…' : catalog.loading
                 ? '전시 작품을 불러오는 중…'
-                : '아직 공개된 작품이 없습니다.')}
-            {catalog.error && (
-              <button onClick={() => void catalog.reload()}>다시 시도</button>
+                : rooms.openIds.length===0 ? '새로운 전시를 준비하고 있습니다.' : '아직 공개된 작품이 없습니다.')}
+            {(rooms.error || catalog.error) && (
+              <button onClick={() => {void rooms.reload();void catalog.reload()}}>다시 시도</button>
             )}
           </div>
         )}
@@ -183,14 +185,15 @@ function GalleryApp() {
             )}
           </div>
           <label className="room-navigation">전시실 이동
-            <select value={currentArea.id==='LOBBY'?'':currentArea.id} disabled={paused} onChange={event=>{
+            <select value={currentArea.id==='LOBBY'?'':currentArea.id} disabled={paused||rooms.openIds.length===0} onChange={event=>{
               const id=event.target.value;
+              if(!rooms.openIds.includes(id))return;
               const area=layout.areas.find(area=>area.id===id);
               if(area){const next={x:area.x,z:area.z+3,yaw:0};poseRef.current=next;setPose({...next})}
             }}>
-              <option value="" disabled hidden>전시실 선택</option>
+              <option value="" disabled hidden>{rooms.openIds.length?'전시실 선택':'오픈한 전시실 없음'}</option>
               {currentArea.id==='CORRIDOR'&&<option value="CORRIDOR" disabled>연결 통로</option>}
-              {rooms.ids.map(id=><option key={id} value={id}>{roomName(id,rooms.names)}</option>)}
+              {rooms.ids.map(id=><option key={id} value={id} disabled={!rooms.openIds.includes(id)}>{roomName(id,rooms.names)}{rooms.openIds.includes(id)?'':' · 준비 중'}</option>)}
             </select>
           </label>
           <button onClick={reset}>⌂ 로비로 이동</button>

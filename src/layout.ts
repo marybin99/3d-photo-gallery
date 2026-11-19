@@ -44,7 +44,7 @@ function doorwayPosts(doors: Doorway[]): Barrier[] {
   })))
 }
 export const obstacles: Barrier[] = [...walls, ...doorwayPosts(doorways), desk]
-export type GalleryLayout = { areas: Area[]; walls: Barrier[]; obstacles: Barrier[]; doorways: Doorway[] }
+export type GalleryLayout = { areas: Area[]; walls: Barrier[]; obstacles: Barrier[]; doorways: Doorway[]; closedRoomIds: string[] }
 // Pack rooms along a central corridor. Stable room/slot IDs survive deletion and repacking.
 export function additionalRoomAreas(ids: string[]): Area[] {
   return [...new Set(ids)].filter(id=>/^[D-Z]$/.test(id)).sort().map((id,index)=>({
@@ -52,9 +52,17 @@ export function additionalRoomAreas(ids: string[]): Area[] {
     width:16, depth:16, color:index%2===0?'#b9b29e':'#c3ac9e',
   }))
 }
-export function createGalleryLayout(ids: string[]): GalleryLayout {
+function withRoomAccess(layout: GalleryLayout, closedIds: string[]): GalleryLayout {
+  const closedRoomIds=[...new Set(closedIds)].filter(id=>/^[A-Z]$/.test(id)&&layout.areas.some(area=>area.id===id))
+  const barriers: Barrier[]=layout.doorways.filter(door=>closedRoomIds.includes(door.zone)).map(door=>({
+    x:door.x,z:door.z,width:Math.abs(Math.cos(door.rotation))>.5?4.2:.4,
+    depth:Math.abs(Math.cos(door.rotation))>.5?.4:4.2,height:4.1,
+  }))
+  return {...layout,closedRoomIds,obstacles:[...layout.obstacles,...barriers]}
+}
+export function createGalleryLayout(ids: string[], closedIds: string[]=[]): GalleryLayout {
   const extraAreas=additionalRoomAreas(ids)
-  if(!extraAreas.length)return defaultLayout
+  if(!extraAreas.length)return withRoomAccess(defaultLayout,closedIds)
   const rows=Math.ceil(extraAreas.length/2)
   const corridor: Area={id:'CORRIDOR',label:'연결 통로',x:0,z:10+rows*8,width:8,depth:rows*16,color:'#c7b49b'}
   const nextWalls: Barrier[]=[
@@ -83,16 +91,16 @@ export function createGalleryLayout(ids: string[]): GalleryLayout {
     ...extraAreas.map(area=>({x:area.x<0?-4:4,z:area.z,
       rotation:area.x<0?Math.PI/2:-Math.PI/2,zone:area.id,returnZone:'CORRIDOR'})),
   ]
-  return {areas:[...areas,corridor,...extraAreas],walls:uniqueWalls,
-    obstacles:[...uniqueWalls,...doorwayPosts(nextDoors),desk],doorways:nextDoors}
+  return withRoomAccess({areas:[...areas,corridor,...extraAreas],walls:uniqueWalls,
+    obstacles:[...uniqueWalls,...doorwayPosts(nextDoors),desk],doorways:nextDoors,closedRoomIds:[]},closedIds)
 }
-export const defaultLayout: GalleryLayout = {areas,walls,obstacles,doorways}
+export const defaultLayout: GalleryLayout = {areas,walls,obstacles,doorways,closedRoomIds:[]}
 export const PLAYER_RADIUS = .35
 function closestPoint(x: number, z: number, b: Barrier) {
   return { x: Math.max(b.x-b.width/2,Math.min(b.x+b.width/2,x)), z: Math.max(b.z-b.depth/2,Math.min(b.z+b.depth/2,z)) }
 }
 export function canStand(x: number, z: number, radius = PLAYER_RADIUS, layout = defaultLayout): boolean {
-  const inBuilding = layout.areas.some(a => Math.abs(x-a.x)<=a.width/2 && Math.abs(z-a.z)<=a.depth/2)
+  const inBuilding = layout.areas.some(a => !layout.closedRoomIds.includes(a.id) && Math.abs(x-a.x)<=a.width/2 && Math.abs(z-a.z)<=a.depth/2)
   return inBuilding && !layout.obstacles.some(b=>{
     const closest=closestPoint(x,z,b)
     return Math.hypot(x-closest.x,z-closest.z)<radius-1e-7
@@ -138,6 +146,7 @@ export function areaAt(x: number, z: number, layout = defaultLayout): Area {
 // Retain a visitor's position within their room if deleting another room repacks the wing.
 export function reconcileGalleryPose(pose: typeof SPAWN, previous: GalleryLayout, next: GalleryLayout) {
   const oldArea=areaAt(pose.x,pose.z,previous)
+  if(next.closedRoomIds.includes(oldArea.id))return {...SPAWN}
   if(/^[D-Z]$/.test(oldArea.id)){
     const area=next.areas.find(area=>area.id===oldArea.id)
     if(!area)return {...SPAWN}

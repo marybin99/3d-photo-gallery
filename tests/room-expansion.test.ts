@@ -34,7 +34,7 @@ test('additional rooms preserve existing frames and have twelve distinct support
 })
 
 test('added room names, empty frames, allocation, labels and artwork conversion use added slots',()=>{
-  const records=[{id:'D',name:'계절의 기억',updated_at:'now'}]
+  const records=[{id:'D',name:'계절의 기억',is_open:true,updated_at:'now'}]
   const names=namesFromRecords(records)
   assert.deepEqual(allRoomIds(records),['A','B','C','D'])
   assert.equal(roomName('D',names),'계절의 기억')
@@ -57,7 +57,7 @@ test('room creation sends only the validated name to the atomic admin RPC',async
     auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},
     global:{fetch:async(input,init)=>{
       calls.push({path:new URL(String(input)).pathname,body:JSON.parse(String(init?.body))})
-      return new Response(JSON.stringify([{id:'D',name:'봄',updated_at:'now'}]),{headers:{'content-type':'application/json'}})
+      return new Response(JSON.stringify([{id:'D',name:'봄',is_open:false,updated_at:'now'}]),{headers:{'content-type':'application/json'}})
     }},
   })
   const repo=createRoomRepository(client)
@@ -145,9 +145,9 @@ test('room deletion checks the ID and sends its version to the admin RPC',async(
     }},
   })
   const repo=createRoomRepository(client)
-  await assert.rejects(()=>repo.remove({id:'A',name:'기본 전시실',updated_at:'now'}),/기본/)
+  await assert.rejects(()=>repo.remove({id:'A',name:'기본 전시실',is_open:true,updated_at:'now'}),/기본/)
   assert.equal(calls.length,0)
-  await repo.remove({id:'D',name:'봄',updated_at:'now'})
+  await repo.remove({id:'D',name:'봄',is_open:false,updated_at:'now'})
   assert.deepEqual(calls,[{path:'/rest/v1/rpc/delete_gallery_room',body:{room_id:'D',expected_updated_at:'now'}}])
 })
 
@@ -157,6 +157,6 @@ test('failed deletions preserve server messages for occupied rooms and concurren
       auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},
       global:{fetch:async()=>new Response(JSON.stringify({code:'P0001',message}),{status:400,headers:{'content-type':'application/json'}})},
     })
-    await assert.rejects(()=>createRoomRepository(client).remove({id:'D',name:'봄',updated_at:'now'}),{message})
+    await assert.rejects(()=>createRoomRepository(client).remove({id:'D',name:'봄',is_open:false,updated_at:'now'}),{message})
   }
 })

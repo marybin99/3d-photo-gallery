@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { type Artwork } from './data';
 import ArtworkImage from './ArtworkImage';
+import ClosedRoomCurtain from './ClosedRoomCurtain';
 import { fillArtworkSlots } from './artworkModel';
 import { roomName, type RoomNames } from './roomModel';
 import {
@@ -371,14 +372,17 @@ function Doorway({
   rotation = 0,
   label,
   returnLabel,
+  closed,
 }: {
   position: [number, number, number];
   rotation?: number;
   label: string;
   returnLabel: string;
+  closed: boolean;
 }) {
   return (
     <group position={position} rotation={[0, rotation, 0]}>
+      {closed&&<ClosedRoomCurtain/>}
       <Wall position={[-2.05, 2, 0]} args={[0.16, 4, 0.42]} color="#ac9477" />
       <Wall position={[2.05, 2, 0]} args={[0.16, 4, 0.42]} color="#ac9477" />
       <Wall position={[0, 4.35, 0]} args={[4.3, 0.9, 0.42]} color="#ac9477" />
@@ -422,7 +426,7 @@ export default function Gallery({
   // Keep the shader light count bounded as the connected wing grows.
   const focusX=Math.round(pose.current.x/8)*8;
   const focusZ=Math.round(pose.current.z/8)*8;
-  const nearbyAreas=useMemo(()=>new Set(layout.areas.filter(area=>area.id!=='CORRIDOR')
+  const nearbyAreas=useMemo(()=>new Set(layout.areas.filter(area=>area.id!=='CORRIDOR'&&!layout.closedRoomIds.includes(area.id))
     .sort((a,b)=>Math.hypot(a.x-focusX,a.z-focusZ)-Math.hypot(b.x-focusX,b.z-focusZ))
     .slice(0,4).map(area=>area.id)),[layout,focusX,focusZ]);
   const visibleDoors=layout.doorways.filter(door=>Math.hypot(door.x-focusX,door.z-focusZ)<32);
@@ -474,6 +478,7 @@ export default function Gallery({
           rotation={door.rotation}
           label={roomName(door.zone,roomNames)}
           returnLabel={roomName(door.returnZone ?? 'LOBBY',roomNames)}
+          closed={layout.closedRoomIds.includes(door.zone)}
         />
       ))}
       {fillArtworkSlots(artworks, slots).filter(art=>nearbyAreas.has(art.zone)).map((art) => (

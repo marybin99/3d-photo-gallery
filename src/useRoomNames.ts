@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createRoomRepository } from './roomRepository'
-import { allRoomIds, namesFromRecords, type RoomRecord } from './roomModel'
+import { allRoomIds, openRoomIds, namesFromRecords, type RoomRecord } from './roomModel'
 
 export function useRoomNames(client:SupabaseClient|null) {
   const repository=useMemo(()=>client?createRoomRepository(client):null,[client])
@@ -35,6 +35,16 @@ export function useRoomNames(client:SupabaseClient|null) {
       return next
     }finally{writing.current=false}
   }
+  const setOpen=async(record:RoomRecord,isOpen:boolean)=>{
+    if(!repository)throw new Error('Supabase 연결이 필요합니다.')
+    if(writing.current)throw new Error('전시실을 저장 중입니다. 잠시 후 다시 시도해 주세요.')
+    writing.current=true;++generation.current;setLoading(false)
+    try{
+      const next=await repository.setOpen(record,isOpen)
+      if(mounted.current){setRecords(items=>items.map(item=>item.id===next.id?next:item));setError('')}
+      return next
+    }finally{writing.current=false}
+  }
   const create=async(name:string)=>{
     if(!repository)throw new Error('Supabase 연결이 필요합니다.')
     if(writing.current)throw new Error('전시실을 저장 중입니다. 잠시 후 다시 시도해 주세요.')
@@ -57,5 +67,5 @@ export function useRoomNames(client:SupabaseClient|null) {
       if(mounted.current){setRecords(items=>latest ?? items.filter(item=>item.id!==record.id));setError('')}
     }finally{writing.current=false}
   }
-  return {remove,ids:allRoomIds(records),create,records,names:namesFromRecords(records),loading,error,reload,save}
+  return {setOpen,openIds:client?openRoomIds(records):allRoomIds(records),remove,ids:allRoomIds(records),create,records,names:namesFromRecords(records),loading,error,reload,save}
 }

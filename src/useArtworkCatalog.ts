@@ -21,7 +21,8 @@ export function useArtworkCatalog(availableSlots = artworks) {
     setLoading(true);
     setError('');
     try {
-      const records = await repository.list(true);
+      const availableIds=new Set(availableSlots.map(slot=>slot.id));
+      const records = (await repository.list(true)).filter(record=>availableIds.has(record.slot_id));
       const urls = await repository.imageUrls(records);
       const next = records.map((record) => {
         const url = urls.get(record.image_path);

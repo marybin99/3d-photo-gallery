@@ -10,3 +10,4 @@ import './room-names.test.ts';
 import './guestbook-writing.test.ts';
 import './guestbook-management.test.ts';
 import './room-expansion.test.ts';
+import './room-opening.test.ts';

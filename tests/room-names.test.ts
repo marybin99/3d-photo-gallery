@@ -11,7 +11,7 @@ test('room names trim spaces, reject empty or oversized names and retain stable 
   assert.throws(()=>validateRoomName('   '))
   assert.throws(()=>validateRoomName('가'.repeat(25)))
   assert.throws(()=>validateRoomName('봄\n여름'))
-  const names=namesFromRecords([{id:'B',name:'계절의 기억',updated_at:'today'}])
+  const names=namesFromRecords([{id:'B',name:'계절의 기억',is_open:true,updated_at:'today'}])
   assert.equal(roomName('B',names),'계절의 기억')
   assert.equal(roomName('A',names),defaultRoomNames.A)
   assert.equal(roomName('LOBBY',names),'로비')
@@ -39,10 +39,10 @@ test('room rename uses the existing identifier and version without writing artwo
     auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},
     global:{fetch:async(input,init)=>{
       calls.push({url:new URL(String(input)),method:init?.method??'GET',body:String(init?.body??'')})
-      return new Response(JSON.stringify({id:'B',name:'봄의 기록',updated_at:'new'}),{headers:{'content-type':'application/json'}})
+      return new Response(JSON.stringify({id:'B',name:'봄의 기록',is_open:true,updated_at:'new'}),{headers:{'content-type':'application/json'}})
     }},
   })
-  const record={id:'B' as const,name:'B 전시실',updated_at:'2026-11-13T00:00:00Z'}
+  const record={id:'B' as const,name:'B 전시실',is_open:true,updated_at:'2026-11-13T00:00:00Z'}
   const next=await createRoomRepository(client).rename(record,' 봄의 기록 ')
   assert.equal(next.name,'봄의 기록')
   assert.match(calls[0].url.pathname,/gallery_rooms$/)
@@ -57,5 +57,5 @@ test('room rename reports a conflict instead of overwriting a newer name',async(
     auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},
     global:{fetch:async()=>new Response(JSON.stringify({code:'PGRST116',message:'No matching row'}),{status:406,headers:{'content-type':'application/json'}})},
   })
-  await assert.rejects(()=>createRoomRepository(client).rename({id:'A',name:'A 전시실',updated_at:'old'},'새 이름'),/다른 곳에서/)
+  await assert.rejects(()=>createRoomRepository(client).rename({id:'A',name:'A 전시실',is_open:true,updated_at:'old'},'새 이름'),/다른 곳에서/)
 })

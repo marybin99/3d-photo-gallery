@@ -183,13 +183,12 @@ function GalleryApp() {
             )}
           </div>
           <label className="room-navigation">전시실 이동
-            <select value={currentArea.id} disabled={paused} onChange={event=>{
+            <select value={currentArea.id==='LOBBY'?'':currentArea.id} disabled={paused} onChange={event=>{
               const id=event.target.value;
-              if(id==='LOBBY'){reset();return}
               const area=layout.areas.find(area=>area.id===id);
               if(area){const next={x:area.x,z:area.z+3,yaw:0};poseRef.current=next;setPose({...next})}
             }}>
-              <option value="LOBBY">로비</option>
+              <option value="" disabled hidden>전시실 선택</option>
               {currentArea.id==='CORRIDOR'&&<option value="CORRIDOR" disabled>연결 통로</option>}
               {rooms.ids.map(id=><option key={id} value={id}>{roomName(id,rooms.names)}</option>)}
             </select>

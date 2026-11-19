@@ -1,16 +1,15 @@
 import { useFrame, useThree } from '@react-three/fiber';
-import { Text } from '@react-three/drei';
+import { Html, Text } from '@react-three/drei';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { type Artwork } from './data';
 import ArtworkImage from './ArtworkImage';
+import YouTubePlayer from './YouTubePlayer';
+import ClosedRoomCurtain from './ClosedRoomCurtain';
 import { fillArtworkSlots } from './artworkModel';
 import { roomName, type RoomNames } from './roomModel';
 import {
-  areas,
-  walls,
-  obstacles,
-  doorways,
+  type GalleryLayout,
   moveAndSlide,
   SPAWN,
   BOOK,
@@ -95,10 +94,15 @@ function Wall({
 function ImageFrame({
   art,
   onSelect,
+  playing,
 }: {
   art: Artwork;
   onSelect: (a: Artwork) => void;
+  playing: boolean;
 }) {
+  const isVideo=!!art.youtubeId;
+  const frameHeight=isVideo?1.17875:1.52;
+  const labelY=isVideo?-.73:-.88;
   return (
     <group
       position={art.position}
@@ -112,15 +116,21 @@ function ImageFrame({
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
       <mesh position={[0, 0, 0]} castShadow>
-        <boxGeometry args={[1.94, 1.52, 0.11]} />
+        <boxGeometry args={[1.94, frameHeight, 0.11]} />
         <meshStandardMaterial color="#806d59" roughness={0.65} />
       </mesh>
       <mesh position={[0, 0, 0.064]}>
-        <planeGeometry args={[1.74, 1.32]} />
+        <planeGeometry args={isVideo?[1.82,1.05875]:[1.74,1.32]} />
         <meshBasicMaterial color="#fdfbf8" />
       </mesh>
-      {art.image && <ArtworkImage url={art.image} />}
-      <mesh position={[0, -0.88, 0.08]}>
+      {art.image && <ArtworkImage url={art.image} width={isVideo?1.74:1.62} height={isVideo?.97875:1.2} />}
+      {art.youtubeId&&!playing&&<Text position={[0,0,.09]} fontSize={.3} color="white">▶</Text>}
+      {/* Blend the video through a depth-tested opening in the canvas so the
+          character and other foreground geometry remain in front of it. */}
+      {art.youtubeId&&playing&&<Html transform position={[0,0,.1]} distanceFactor={1.0875} pointerEvents="none" occlude="blending" zIndexRange={[2,0]}>
+        <div className="artwork-video-screen"><YouTubePlayer videoId={art.youtubeId} title={art.title} controls={false}/></div>
+      </Html>}
+      <mesh position={[0, labelY, 0.08]}>
         <planeGeometry args={[1.35, 0.25]} />
         <meshBasicMaterial color="#f8f5ed" />
       </mesh>
@@ -128,7 +138,7 @@ function ImageFrame({
         fontSize={0.115}
         anchorX="center"
         color="#51483e"
-        position={[0, -0.88, 0.09]}
+        position={[0, labelY, 0.09]}
       >
         {art.title}
       </Text>
@@ -151,11 +161,13 @@ function Player({
   onPose,
   mobileInput,
   paused,
+  layout,
 }: {
   pose: React.RefObject<Pose>;
   onPose: (p: Pose) => void;
   mobileInput: React.RefObject<{ forward: number; right: number }>;
   paused: boolean;
+  layout: GalleryLayout;
 }) {
   const body = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({
@@ -166,16 +178,21 @@ function Player({
   const velocity = useRef({ x: 0, z: 0 });
   const lastPose = useRef(pose.current);
   const cameraReady = useRef(false);
-  const { camera, gl } = useThree();
+  const { camera, gl, events } = useThree();
+  const lookSurface = events.connected instanceof HTMLElement
+    ? events.connected
+    : gl.domElement.parentElement ?? gl.domElement;
   const pitch = useRef(DEFAULT_PITCH);
   useEffect(() => {
     if (paused) return;
-    return bindMouseLook(gl.domElement, (dx, dy) => {
+    // HTML video depth blending disables pointer events on the canvas itself.
+    // Its stable event container continues receiving drags during playback.
+    return bindMouseLook(lookSurface, (dx, dy) => {
       const look = mouseLook(pose.current.yaw, pitch.current, dx, dy);
       pose.current.yaw = look.yaw;
       pitch.current = look.pitch;
     });
-  }, [gl, paused, pose]);
+  }, [lookSurface, paused, pose]);
   const broadcast = useRef(0);
   const keys = useKeyboard(!paused);
   const target = useMemo(() => new THREE.Vector3(), []);
@@ -184,7 +201,7 @@ function Player({
   const hit = useMemo(() => new THREE.Vector3(), []);
   const cameraWalls = useMemo(
     () =>
-      obstacles.map(
+      layout.obstacles.map(
         (w) =>
           new THREE.Box3(
             new THREE.Vector3(
@@ -199,7 +216,7 @@ function Player({
             ),
           ),
       ),
-    [],
+    [layout],
   );
   useFrame((_, delta) => {
     const p = pose.current;
@@ -246,6 +263,8 @@ function Player({
       p.z,
       velocity.current.x * d,
       velocity.current.z * d,
+      undefined,
+      layout,
     );
     updateCharacterMotion(motion.current, next.x - p.x, next.z - p.z, d);
     p.x = next.x;
@@ -369,13 +388,18 @@ function Doorway({
   position,
   rotation = 0,
   label,
+  returnLabel,
+  closed,
 }: {
   position: [number, number, number];
   rotation?: number;
   label: string;
+  returnLabel: string;
+  closed: boolean;
 }) {
   return (
     <group position={position} rotation={[0, rotation, 0]}>
+      {closed&&<ClosedRoomCurtain/>}
       <Wall position={[-2.05, 2, 0]} args={[0.16, 4, 0.42]} color="#ac9477" />
       <Wall position={[2.05, 2, 0]} args={[0.16, 4, 0.42]} color="#ac9477" />
       <Wall position={[0, 4.35, 0]} args={[4.3, 0.9, 0.42]} color="#ac9477" />
@@ -388,7 +412,7 @@ function Doorway({
         fontSize={0.22}
         color="#fff6e7"
       >
-        LOBBY
+        {returnLabel}
       </Text>
     </group>
   );
@@ -396,22 +420,35 @@ function Doorway({
 export default function Gallery({
   artworks,
   roomNames,
+  slots,
   onSelect,
   onGuestbook,
   pose,
   onPose,
   mobileInput,
   paused,
+  videoPaused=paused,
+  layout,
 }: {
   artworks: Artwork[];
   roomNames: RoomNames;
+  slots: Artwork[];
   onSelect: (a: Artwork) => void;
   onGuestbook: () => void;
   pose: React.RefObject<Pose>;
   onPose: (p: Pose) => void;
   mobileInput: React.RefObject<{ forward: number; right: number }>;
   paused: boolean;
+  videoPaused?: boolean;
+  layout: GalleryLayout;
 }) {
+  // Keep the shader light count bounded as the connected wing grows.
+  const focusX=Math.round(pose.current.x/8)*8;
+  const focusZ=Math.round(pose.current.z/8)*8;
+  const nearbyAreas=useMemo(()=>new Set(layout.areas.filter(area=>area.id!=='CORRIDOR'&&!layout.closedRoomIds.includes(area.id))
+    .sort((a,b)=>Math.hypot(a.x-focusX,a.z-focusZ)-Math.hypot(b.x-focusX,b.z-focusZ))
+    .slice(0,4).map(area=>area.id)),[layout,focusX,focusZ]);
+  const visibleDoors=layout.doorways.filter(door=>Math.hypot(door.x-focusX,door.z-focusZ)<32);
   return (
     <>
       <color attach="background" args={['#e6dfd4']} />
@@ -428,7 +465,7 @@ export default function Gallery({
         shadow-camera-bottom={-28}
         shadow-camera-far={70}
       />
-      {areas.map((area) => (
+      {layout.areas.map((area) => (
         <group key={area.id}>
           <mesh
             receiveShadow
@@ -438,31 +475,33 @@ export default function Gallery({
             <planeGeometry args={[area.width, area.depth]} />
             <meshStandardMaterial color={area.color} roughness={0.9} />
           </mesh>
-          <pointLight
+          {nearbyAreas.has(area.id)&&<pointLight
             position={[area.x, 4.5, area.z]}
             intensity={15}
             distance={22}
             color="#fff1db"
-          />
+          />}
         </group>
       ))}
-      {walls.map((w, i) => (
+      {layout.walls.map((w, i) => (
         <Wall
           key={i}
           position={[w.x, 2.4, w.z]}
           args={[w.width, 4.8, w.depth]}
         />
       ))}
-      {doorways.map((door) => (
+      {visibleDoors.map((door) => (
         <Doorway
           key={door.zone}
           position={[door.x, 0, door.z]}
           rotation={door.rotation}
           label={roomName(door.zone,roomNames)}
+          returnLabel={roomName(door.returnZone ?? 'LOBBY',roomNames)}
+          closed={layout.closedRoomIds.includes(door.zone)}
         />
       ))}
-      {fillArtworkSlots(artworks).map((art) => (
-        <ImageFrame key={art.id} art={art} onSelect={onSelect} />
+      {fillArtworkSlots(artworks, slots).filter(art=>nearbyAreas.has(art.zone)).map((art) => (
+        <ImageFrame key={art.id} art={art} onSelect={onSelect} playing={!videoPaused} />
       ))}
       <Text
         position={[4, 2.8, 9.8]}
@@ -486,6 +525,7 @@ export default function Gallery({
         onPose={onPose}
         mobileInput={mobileInput}
         paused={paused}
+        layout={layout}
       />
     </>
   );

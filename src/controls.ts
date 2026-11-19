@@ -53,7 +53,7 @@ export function movementDelta(yaw: number, forward: number, right: number, dista
   }
 }
 
-export function bindMouseLook(canvas: HTMLCanvasElement, onLook: (dx: number, dy: number) => void) {
+export function bindMouseLook(canvas: HTMLElement, onLook: (dx: number, dy: number) => void) {
   let pointer: number | null = null
   let touch = false
   let startX = 0, startY = 0, lastX = 0, lastY = 0

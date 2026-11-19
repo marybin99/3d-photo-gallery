@@ -4,6 +4,7 @@ import {
   ARTWORK_COLUMNS,
   SIGNED_URL_SECONDS,
   validateDraft,
+  slots,
   type ArtworkDraft,
   type ArtworkRecord,
 } from './artworkModel.ts';
@@ -25,7 +26,7 @@ function databaseError(error: { code?: string; message: string }): Error {
     '작품 정보를 저장하거나 불러오지 못했습니다. 연결 상태와 Supabase 초기 설정을 확인해 주세요.',
   );
 }
-export function createArtworkRepository(client: SupabaseClient) {
+export function createArtworkRepository(client: SupabaseClient, availableSlots = slots) {
   const bucket = client.storage.from(ARTWORK_BUCKET);
   const removeImage = async (path: string) => {
     const warning =
@@ -49,9 +50,10 @@ export function createArtworkRepository(client: SupabaseClient) {
       return data ?? [];
     },
     async imageUrls(records: ArtworkRecord[]): Promise<Map<string, string>> {
-      if (!records.length) return new Map();
+      const paths=records.flatMap(row=>row.image_path?[row.image_path]:[]);
+      if (!paths.length) return new Map();
       const { data, error } = await bucket.createSignedUrls(
-        records.map((row) => row.image_path),
+        paths,
         SIGNED_URL_SECONDS,
       );
       if (error || !data)
@@ -74,10 +76,11 @@ export function createArtworkRepository(client: SupabaseClient) {
       current: ArtworkRecord | null,
       image: Blob | null,
     ) {
-      const values = validateDraft(draft);
-      if (!current && !image) throw new Error('등록할 사진을 선택해 주세요.');
+      const values = validateDraft(draft, availableSlots);
+      const isVideo=!!values.youtube_url;
+      if (!isVideo && !image && !current?.image_path) throw new Error('등록할 사진을 선택해 주세요.');
       let uploaded: string | null = null;
-      if (image) {
+      if (image && !isVideo) {
         const extension = {
           'image/webp': 'webp',
           'image/jpeg': 'jpg',
@@ -97,7 +100,7 @@ export function createArtworkRepository(client: SupabaseClient) {
       }
       const payload = {
         ...values,
-        image_path: uploaded ?? current!.image_path,
+        image_path: isVideo ? null : uploaded ?? current!.image_path,
       };
       try {
         const query = current
@@ -114,7 +117,7 @@ export function createArtworkRepository(client: SupabaseClient) {
             '다른 곳에서 작품이 수정되었습니다. 목록을 새로고침해 주세요.',
           );
         const warning =
-          uploaded && current ? await removeImage(current.image_path) : '';
+          current?.image_path && current.image_path!==payload.image_path ? await removeImage(current.image_path) : '';
         return { record: data as ArtworkRecord, warning };
       } catch (error) {
         if (uploaded) {
@@ -140,7 +143,7 @@ export function createArtworkRepository(client: SupabaseClient) {
         throw new Error(
           '다른 곳에서 작품이 수정되었습니다. 목록을 새로고침해 주세요.',
         );
-      return { warning: await removeImage(record.image_path) };
+      return { warning: record.image_path ? await removeImage(record.image_path) : '' };
     },
   };
 }

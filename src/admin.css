@@ -380,6 +380,11 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
   margin-top: 18px;
+  max-height: min(420px, 55dvh);
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+  padding: 3px;
 }
 .admin-room-forms form {
   display: flex;
@@ -464,4 +469,51 @@
   padding-top: 18px;
   border-top: 1px solid #ded2c4;
   font-size: 12px;
+}
+
+.admin-room-create {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 20px 0;
+}
+.admin-room-create label {
+  flex: 1 1 220px;
+  max-width: 420px;
+}
+
+.admin-room-forms .admin-room-delete {
+  color: #9a3b32;
+  border-color: #cda79e;
+}
+@media (min-width: 951px) {
+  .admin-room-forms { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.admin-room-item {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #e2d6c8;
+  border-radius: 8px;
+  background: #fcf9f3;
+}
+.admin-room-forms .admin-room-toggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 14px 0 0;
+  font-size: 12px;
+  color: #78624d;
+}
+.admin-room-toggle input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: #657451;
+}
+@media (max-width: 420px) {
+  .admin-room-item { padding: 12px; }
+  .admin-room-item form { flex-wrap: wrap; }
+  .admin-room-item form label { flex-basis: 100%; }
 }

@@ -4,7 +4,7 @@ import { supabase } from './supabase';
 import { createArtworkRepository } from './artworkRepository';
 import { recordToArtwork } from './artworkModel';
 
-export function useArtworkCatalog() {
+export function useArtworkCatalog(availableSlots = artworks) {
   const repository = useMemo(
     () => (supabase ? createArtworkRepository(supabase) : null),
     [],
@@ -21,12 +21,13 @@ export function useArtworkCatalog() {
     setLoading(true);
     setError('');
     try {
-      const records = await repository.list(true);
+      const availableIds=new Set(availableSlots.map(slot=>slot.id));
+      const records = (await repository.list(true)).filter(record=>availableIds.has(record.slot_id));
       const urls = await repository.imageUrls(records);
       const next = records.map((record) => {
-        const url = urls.get(record.image_path);
-        if (!url) throw new Error('사진 주소를 불러오지 못했습니다.');
-        return recordToArtwork(record, url);
+        const url = record.image_path ? urls.get(record.image_path) : '';
+        if (!record.youtube_url && !url) throw new Error('사진 주소를 불러오지 못했습니다.');
+        return recordToArtwork(record, url ?? '', availableSlots);
       });
       if (current === request.current) setItems(next);
     } catch {
@@ -37,7 +38,7 @@ export function useArtworkCatalog() {
     } finally {
       if (current === request.current) setLoading(false);
     }
-  }, [repository]);
+  }, [repository, availableSlots]);
   useEffect(() => {
     void reload();
     // Refresh signed URLs before their one-hour expiry, including suspended tabs.

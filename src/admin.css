@@ -465,3 +465,23 @@
   border-top: 1px solid #ded2c4;
   font-size: 12px;
 }
+
+.admin-room-create {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 20px 0;
+}
+.admin-room-create label {
+  flex: 1 1 220px;
+  max-width: 420px;
+}
+
+.admin-room-forms .admin-room-delete {
+  color: #9a3b32;
+  border-color: #cda79e;
+}
+@media (min-width: 951px) {
+  .admin-room-forms { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

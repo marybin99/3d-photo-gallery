@@ -4,6 +4,7 @@ import {
   ARTWORK_COLUMNS,
   SIGNED_URL_SECONDS,
   validateDraft,
+  slots,
   type ArtworkDraft,
   type ArtworkRecord,
 } from './artworkModel.ts';
@@ -25,7 +26,7 @@ function databaseError(error: { code?: string; message: string }): Error {
     '작품 정보를 저장하거나 불러오지 못했습니다. 연결 상태와 Supabase 초기 설정을 확인해 주세요.',
   );
 }
-export function createArtworkRepository(client: SupabaseClient) {
+export function createArtworkRepository(client: SupabaseClient, availableSlots = slots) {
   const bucket = client.storage.from(ARTWORK_BUCKET);
   const removeImage = async (path: string) => {
     const warning =
@@ -74,7 +75,7 @@ export function createArtworkRepository(client: SupabaseClient) {
       current: ArtworkRecord | null,
       image: Blob | null,
     ) {
-      const values = validateDraft(draft);
+      const values = validateDraft(draft, availableSlots);
       if (!current && !image) throw new Error('등록할 사진을 선택해 주세요.');
       let uploaded: string | null = null;
       if (image) {

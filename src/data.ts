@@ -1,3 +1,4 @@
+import { additionalRoomAreas } from './layout.ts'
 export type Artwork = { id: string; title: string; description: string; image: string; position: [number,number,number]; rotation: number; zone: string; wall: 'front' | 'left' | 'right' }
 const frontArtworks: Artwork[] = [
   {id:'01', title:'오후의 바람', description:'멀리 떠나지 않아도 만날 수 있는 풍경.', image:'/artworks/01.svg', position:[-23.75,2.1,-3.8],rotation:Math.PI/2,zone:'A',wall:'front'},
@@ -42,3 +43,16 @@ const sideArtworks: Artwork[] = (['A', 'B', 'C'] as const).flatMap((zone, roomIn
   )
 )
 export const artworks: Artwork[] = [...frontArtworks, ...sideArtworks]
+
+// Reuse the three-wall arrangement of A/C, with stable twelve-slot IDs per room.
+export function artworkSlots(ids: string[]): Artwork[] {
+  return [...artworks, ...additionalRoomAreas(ids).flatMap(area => {
+    const templateZone=area.x<0?'A':'C'
+    const templateX=area.x<0?-16:16
+    return artworks.filter(art => art.zone === templateZone).map((art, index): Artwork => ({
+      ...art, id: `${area.id}-${String(index + 1).padStart(2, '0')}`, zone:area.id,
+      title: '', description: '', image: '',
+      position: [art.position[0] + area.x-templateX, art.position[1], art.position[2] + area.z-2],
+    }))
+  })]
+}

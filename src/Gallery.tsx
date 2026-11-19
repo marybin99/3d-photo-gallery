@@ -7,10 +7,7 @@ import ArtworkImage from './ArtworkImage';
 import { fillArtworkSlots } from './artworkModel';
 import { roomName, type RoomNames } from './roomModel';
 import {
-  areas,
-  walls,
-  obstacles,
-  doorways,
+  type GalleryLayout,
   moveAndSlide,
   SPAWN,
   BOOK,
@@ -151,11 +148,13 @@ function Player({
   onPose,
   mobileInput,
   paused,
+  layout,
 }: {
   pose: React.RefObject<Pose>;
   onPose: (p: Pose) => void;
   mobileInput: React.RefObject<{ forward: number; right: number }>;
   paused: boolean;
+  layout: GalleryLayout;
 }) {
   const body = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({
@@ -184,7 +183,7 @@ function Player({
   const hit = useMemo(() => new THREE.Vector3(), []);
   const cameraWalls = useMemo(
     () =>
-      obstacles.map(
+      layout.obstacles.map(
         (w) =>
           new THREE.Box3(
             new THREE.Vector3(
@@ -199,7 +198,7 @@ function Player({
             ),
           ),
       ),
-    [],
+    [layout],
   );
   useFrame((_, delta) => {
     const p = pose.current;
@@ -246,6 +245,8 @@ function Player({
       p.z,
       velocity.current.x * d,
       velocity.current.z * d,
+      undefined,
+      layout,
     );
     updateCharacterMotion(motion.current, next.x - p.x, next.z - p.z, d);
     p.x = next.x;
@@ -369,10 +370,12 @@ function Doorway({
   position,
   rotation = 0,
   label,
+  returnLabel,
 }: {
   position: [number, number, number];
   rotation?: number;
   label: string;
+  returnLabel: string;
 }) {
   return (
     <group position={position} rotation={[0, rotation, 0]}>
@@ -388,7 +391,7 @@ function Doorway({
         fontSize={0.22}
         color="#fff6e7"
       >
-        LOBBY
+        {returnLabel}
       </Text>
     </group>
   );
@@ -396,22 +399,33 @@ function Doorway({
 export default function Gallery({
   artworks,
   roomNames,
+  slots,
   onSelect,
   onGuestbook,
   pose,
   onPose,
   mobileInput,
   paused,
+  layout,
 }: {
   artworks: Artwork[];
   roomNames: RoomNames;
+  slots: Artwork[];
   onSelect: (a: Artwork) => void;
   onGuestbook: () => void;
   pose: React.RefObject<Pose>;
   onPose: (p: Pose) => void;
   mobileInput: React.RefObject<{ forward: number; right: number }>;
   paused: boolean;
+  layout: GalleryLayout;
 }) {
+  // Keep the shader light count bounded as the connected wing grows.
+  const focusX=Math.round(pose.current.x/8)*8;
+  const focusZ=Math.round(pose.current.z/8)*8;
+  const nearbyAreas=useMemo(()=>new Set(layout.areas.filter(area=>area.id!=='CORRIDOR')
+    .sort((a,b)=>Math.hypot(a.x-focusX,a.z-focusZ)-Math.hypot(b.x-focusX,b.z-focusZ))
+    .slice(0,4).map(area=>area.id)),[layout,focusX,focusZ]);
+  const visibleDoors=layout.doorways.filter(door=>Math.hypot(door.x-focusX,door.z-focusZ)<32);
   return (
     <>
       <color attach="background" args={['#e6dfd4']} />
@@ -428,7 +442,7 @@ export default function Gallery({
         shadow-camera-bottom={-28}
         shadow-camera-far={70}
       />
-      {areas.map((area) => (
+      {layout.areas.map((area) => (
         <group key={area.id}>
           <mesh
             receiveShadow
@@ -438,30 +452,31 @@ export default function Gallery({
             <planeGeometry args={[area.width, area.depth]} />
             <meshStandardMaterial color={area.color} roughness={0.9} />
           </mesh>
-          <pointLight
+          {nearbyAreas.has(area.id)&&<pointLight
             position={[area.x, 4.5, area.z]}
             intensity={15}
             distance={22}
             color="#fff1db"
-          />
+          />}
         </group>
       ))}
-      {walls.map((w, i) => (
+      {layout.walls.map((w, i) => (
         <Wall
           key={i}
           position={[w.x, 2.4, w.z]}
           args={[w.width, 4.8, w.depth]}
         />
       ))}
-      {doorways.map((door) => (
+      {visibleDoors.map((door) => (
         <Doorway
           key={door.zone}
           position={[door.x, 0, door.z]}
           rotation={door.rotation}
           label={roomName(door.zone,roomNames)}
+          returnLabel={roomName(door.returnZone ?? 'LOBBY',roomNames)}
         />
       ))}
-      {fillArtworkSlots(artworks).map((art) => (
+      {fillArtworkSlots(artworks, slots).filter(art=>nearbyAreas.has(art.zone)).map((art) => (
         <ImageFrame key={art.id} art={art} onSelect={onSelect} />
       ))}
       <Text
@@ -486,6 +501,7 @@ export default function Gallery({
         onPose={onPose}
         mobileInput={mobileInput}
         paused={paused}
+        layout={layout}
       />
     </>
   );

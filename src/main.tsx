@@ -1,17 +1,18 @@
-import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Canvas } from '@react-three/fiber';
 import Gallery, { SPAWN, type Pose } from './Gallery';
 import { followCameraPosition } from './camera';
-import { type Artwork } from './data';
-import { areas, areaAt, BOOK } from './layout';
+import { artworkSlots, type Artwork } from './data';
+import { areaAt, BOOK, createGalleryLayout, reconcileGalleryPose } from './layout';
 import { supabase } from './supabase';
 import Guestbook from './Guestbook';
 import MobileControls from './MobileControls';
 import ControlsGuide from './ControlsGuide';
 import { useArtworkCatalog } from './useArtworkCatalog';
 import { useRoomNames } from './useRoomNames';
-import { roomName, mapNameLines, type RoomNames } from './roomModel';
+import { roomName } from './roomModel';
+import MiniMap from './MiniMap';
 import './styles.css';
 const AdminPage = lazy(() => import('./AdminPage'));
 
@@ -33,83 +34,24 @@ function App() {
   );
 }
 
-function MiniMap({ pose, names }: { pose: Pose; names: RoomNames }) {
-  const mapX = (x: number) => 110 + x * 4;
-  const mapY = (z: number) => 100 + z * 4;
-  return (
-    <div className="minimap" aria-label="미니맵: 로비와 A·B·C 전시실">
-      <div className="minimap-heading">
-        <span>GALLERY MAP</span>
-        <span className="live-dot" />
-      </div>
-      <svg
-        viewBox="0 0 220 152"
-        role="img"
-        aria-label={`현재 위치: ${roomName(areaAt(pose.x, pose.z).id, names)}`}
-      >
-        {areas.map((area) => (
-          <g key={area.id}>
-            <rect
-              x={mapX(area.x - area.width / 2)}
-              y={mapY(area.z - area.depth / 2)}
-              width={area.width * 4}
-              height={area.depth * 4}
-              fill={area.color}
-              stroke="#8b7c6b"
-              strokeWidth="2"
-            />
-            <text
-              x={mapX(area.x)}
-              y={mapY(area.z) - 7}
-              textAnchor="middle"
-              fill="#54483c"
-              fontSize="7"
-            >
-              {mapNameLines(roomName(area.id, names)).map((line, index) => (
-                <tspan key={index} x={mapX(area.x)} dy={index === 0 ? 0 : 9}>
-                  {line}
-                </tspan>
-              ))}
-            </text>
-          </g>
-        ))}
-        <path
-          d="M78 96V112 M142 96V112 M102 76H118"
-          stroke="#c7b49b"
-          strokeWidth="4"
-        />
-        <g
-          aria-label="로비 방명록"
-          transform={`translate(${mapX(BOOK.x)} ${mapY(BOOK.z)})`}
-        >
-          <rect
-            x="-5"
-            y="-3"
-            width="10"
-            height="6"
-            fill="#fff8e5"
-            stroke="#80684f"
-          />
-          <path d="M0 -3V3" stroke="#80684f" />
-        </g>
-        <g
-          transform={`translate(${mapX(pose.x)} ${mapY(pose.z)}) rotate(${(-pose.yaw * 180) / Math.PI})`}
-        >
-          <circle r="4" fill="#7e637d" stroke="white" strokeWidth="1.5" />
-          <path d="M0 -9L-3 -3L3 -3Z" fill="#7e637d" />
-        </g>
-      </svg>
-    </div>
-  );
-}
 function GalleryApp() {
-  const catalog = useArtworkCatalog();
   const rooms = useRoomNames(supabase);
+  const roomKey = rooms.ids.join(',');
+  const slots = useMemo(()=>artworkSlots(roomKey.split(',')),[roomKey]);
+  const layout = useMemo(()=>createGalleryLayout(roomKey.split(',')),[roomKey]);
+  const catalog = useArtworkCatalog(slots);
   const [pose, setPose] = useState<Pose>({ ...SPAWN });
   const poseRef = useRef<Pose>({ ...SPAWN });
+  const previousLayout = useRef(layout);
+  useEffect(() => {
+    const next=reconcileGalleryPose(poseRef.current,previousLayout.current,layout);
+    previousLayout.current=layout;
+    if(next!==poseRef.current){poseRef.current=next;setPose({...next})}
+  },[layout]);
   const mobileInput = useRef({ forward: 0, right: 0 });
   const [selected, setSelected] = useState<Artwork | null>(null);
   const [guestbook, setGuestbook] = useState(false);
+  useEffect(()=>{setSelected(art=>art&&slots.some(slot=>slot.id===art.id)?art:null)},[slots]);
   const [guideMode, setGuideMode] = useState<'welcome' | 'compact' | null>(
     'welcome',
   );
@@ -120,7 +62,7 @@ function GalleryApp() {
   };
   const [minimap, setMinimap] = useState(true);
   const paused = selected !== null || guestbook || guideMode === 'welcome';
-  const currentArea = areaAt(pose.x, pose.z);
+  const currentArea = areaAt(pose.x, pose.z, layout);
   const nearBook = Math.hypot(pose.x - BOOK.x, pose.z - BOOK.z) < 3.2;
   useEffect(() => {
     const interact = (event: KeyboardEvent) => {
@@ -167,7 +109,7 @@ function GalleryApp() {
   };
   return (
     <main>
-      <div className="gallery-view" ref={galleryView} tabIndex={-1}>
+      <div className="gallery-view" data-expanded-wing={rooms.ids.length>3} ref={galleryView} tabIndex={-1}>
         <Canvas
           shadows
           dpr={[1, 1.7]}
@@ -177,6 +119,8 @@ function GalleryApp() {
             <Gallery
               artworks={catalog.items}
               roomNames={rooms.names}
+              slots={slots}
+              layout={layout}
               onSelect={setSelected}
               onGuestbook={() => setGuestbook(true)}
               pose={poseRef}
@@ -196,7 +140,7 @@ function GalleryApp() {
             <small>
               {currentArea.id === 'LOBBY'
                 ? '펼쳐진 책을 클릭하면 방명록이 열립니다'
-                : '문을 통해 중앙 로비로 돌아갈 수 있습니다'}
+                : currentArea.id==='CORRIDOR' ? '통로 양옆의 문으로 전시실에 들어갈 수 있습니다' : '입구를 통해 로비와 다른 전시실로 이어집니다'}
             </small>
           </div>
         </div>
@@ -216,10 +160,12 @@ function GalleryApp() {
             )}
           </div>
         )}
-        {minimap && <MiniMap pose={pose} names={rooms.names} />}
-        <button className="map-toggle" onClick={() => setMinimap((v) => !v)}>
-          {minimap ? '지도 숨기기' : '미니맵 보기'}
-        </button>
+        <div className="map-controls">
+          {minimap && <MiniMap pose={pose} names={rooms.names} layout={layout} />}
+          <button className="map-toggle" onClick={() => setMinimap((v) => !v)}>
+            {minimap ? '지도 숨기기' : '미니맵 보기'}
+          </button>
+        </div>
         <div className="bottom-left">
           <div className="guide-anchor">
             <button
@@ -236,6 +182,18 @@ function GalleryApp() {
               <ControlsGuide variant="compact" onClose={closeGuide} />
             )}
           </div>
+          <label className="room-navigation">전시실 이동
+            <select value={currentArea.id} disabled={paused} onChange={event=>{
+              const id=event.target.value;
+              if(id==='LOBBY'){reset();return}
+              const area=layout.areas.find(area=>area.id===id);
+              if(area){const next={x:area.x,z:area.z+3,yaw:0};poseRef.current=next;setPose({...next})}
+            }}>
+              <option value="LOBBY">로비</option>
+              {currentArea.id==='CORRIDOR'&&<option value="CORRIDOR" disabled>연결 통로</option>}
+              {rooms.ids.map(id=><option key={id} value={id}>{roomName(id,rooms.names)}</option>)}
+            </select>
+          </label>
           <button onClick={reset}>⌂ 로비로 이동</button>
         </div>
         {guideMode === 'welcome' && (

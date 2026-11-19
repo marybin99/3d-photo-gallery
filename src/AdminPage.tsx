@@ -13,11 +13,11 @@ import { createArtworkRepository } from './artworkRepository';
 import {
   firstAvailableSlot,
   slotLabel,
-  slots,
   validateImageFile,
   type ArtworkDraft,
   type ArtworkRecord,
 } from './artworkModel';
+import { artworkSlots } from './data';
 import { prepareArtworkImage } from './prepareArtworkImage';
 import { useRoomNames } from './useRoomNames';
 import { roomName } from './roomModel';
@@ -228,8 +228,10 @@ function ArtworkDashboard({
   client: SupabaseClient;
   userId: string;
 }) {
-  const repository = useMemo(() => createArtworkRepository(client), [client]);
   const rooms = useRoomNames(client);
+  const roomKey = rooms.ids.join(',');
+  const slots = useMemo(() => artworkSlots(roomKey.split(',')), [roomKey]);
+  const repository = useMemo(() => createArtworkRepository(client, slots), [client, slots]);
   const [records, setRecords] = useState<ArtworkRecord[]>([]),
     [urls, setUrls] = useState(new Map<string, string>());
   const [loading, setLoading] = useState(true),
@@ -247,6 +249,16 @@ function ArtworkDashboard({
     request = useRef(0),
     mounted = useRef(true),
     mutation = useRef(false);
+  useEffect(() => {
+    if (filter !== 'ALL' && !rooms.ids.includes(filter)) setFilter('ALL');
+    if (draft.slot_id && !slots.some(slot => slot.id === draft.slot_id)) {
+      setEditing(null);
+      setDraft({ ...emptyDraft });
+      setFile(null);
+      setConfirmDelete(false);
+      if (fileInput.current) fileInput.current.value = '';
+    }
+  }, [roomKey, slots, filter, draft.slot_id]);
   const load = useCallback(async () => {
     const id = ++request.current;
     setLoading(true);
@@ -294,7 +306,7 @@ function ArtworkDashboard({
     setEditing(null);
     setFile(null);
     setConfirmDelete(false);
-    const slotId = firstAvailableSlot(items, filter);
+    const slotId = firstAvailableSlot(items, filter, slots);
     setDraft({ ...emptyDraft, slot_id: slotId });
     if (fileInput.current) fileInput.current.value = '';
     return slotId;
@@ -376,7 +388,7 @@ function ArtworkDashboard({
         <div>
           <span className="eyebrow">CURATE YOUR EXHIBITION</span>
           <h1>작품 관리</h1>
-          <p>36개의 액자에 사진과 이야기를 전시해 보세요.</p>
+          <p>{rooms.ids.length}개 전시실, {slots.length}개의 액자에 사진과 이야기를 전시해 보세요.</p>
         </div>
         <a className="admin-button" href="/">
           전시관 보기 ↗
@@ -385,7 +397,7 @@ function ArtworkDashboard({
       <RoomSettings rooms={rooms} />
       <div className="admin-summary">
         <span>
-          등록 <b>{records.length} / 36</b>
+          등록 <b>{records.length} / {slots.length}</b>
         </span>
         <span>
           공개 <b>{records.filter((row) => row.is_published).length}</b>
@@ -438,7 +450,7 @@ function ArtworkDashboard({
               onChange={(event) => setFilter(event.target.value)}
             >
               <option value="ALL">전체 전시실</option>
-              {['A', 'B', 'C'].map((zone) => (
+              {rooms.ids.map((zone) => (
                 <option key={zone} value={zone}>
                   {roomName(zone, rooms.names)}
                 </option>
@@ -463,7 +475,7 @@ function ArtworkDashboard({
                 <img src={urls.get(record.image_path)} alt="" loading="lazy" />
                 <span>
                   <strong>{record.title}</strong>
-                  <small>{slotLabel(record.slot_id, rooms.names)}</small>
+                  <small>{slotLabel(record.slot_id, rooms.names, slots)}</small>
                   <em>{record.is_published ? '공개' : '비공개'}</em>
                 </span>
               </button>
@@ -486,7 +498,7 @@ function ArtworkDashboard({
                   <option value="" disabled>
                     빈 전시 위치를 선택하세요
                   </option>
-                  {['A', 'B', 'C'].map((zone) => (
+                  {rooms.ids.map((zone) => (
                     <optgroup
                       key={zone}
                       label={`${roomName(zone, rooms.names)}`}
@@ -505,7 +517,7 @@ function ArtworkDashboard({
                               value={slot.id}
                               disabled={occupied}
                             >
-                              {slotLabel(slot.id, rooms.names)}
+                              {slotLabel(slot.id, rooms.names, slots)}
                               {occupied ? ' · 사용 중' : ''}
                             </option>
                           );

@@ -1070,3 +1070,65 @@ main,
   cursor: pointer;
   font-size: 11px;
 }
+
+.room-navigation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #d5c8b8;
+  border-radius: 10px;
+  background: #fffaf1;
+  color: #54483c;
+  font-size: 12px;
+  pointer-events: auto;
+}
+.room-navigation select {
+  min-width: 0;
+  max-width: 160px;
+  padding: 4px;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+}
+
+.map-controls {
+  position: absolute;
+  top: 22px;
+  right: 24px;
+  width: 218px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.map-controls .minimap {
+  position: static;
+  width: 100%;
+  box-sizing: border-box;
+}
+.minimap-viewport {
+  max-height: min(260px, 40dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.map-controls .map-toggle {
+  position: static;
+  align-self: flex-end;
+}
+@media (max-width: 700px) {
+  .map-controls { top: 12px; right: 10px; width: 148px; }
+  .minimap-viewport { max-height: min(210px, 32dvh); }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .map-controls { top: 8px; right: max(12px, env(safe-area-inset-right, 0px)); width: 130px; }
+  .minimap-viewport { max-height: 35dvh; }
+}
+
+@media (max-width: 760px) and (orientation: portrait) {
+  .gallery-view[data-expanded-wing='true'] .catalog-status {
+    top: calc(90px + min(210px, 32dvh));
+  }
+}

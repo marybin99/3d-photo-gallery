@@ -4,7 +4,7 @@ import { supabase } from './supabase';
 import { createArtworkRepository } from './artworkRepository';
 import { recordToArtwork } from './artworkModel';
 
-export function useArtworkCatalog() {
+export function useArtworkCatalog(availableSlots = artworks) {
   const repository = useMemo(
     () => (supabase ? createArtworkRepository(supabase) : null),
     [],
@@ -26,7 +26,7 @@ export function useArtworkCatalog() {
       const next = records.map((record) => {
         const url = urls.get(record.image_path);
         if (!url) throw new Error('사진 주소를 불러오지 못했습니다.');
-        return recordToArtwork(record, url);
+        return recordToArtwork(record, url, availableSlots);
       });
       if (current === request.current) setItems(next);
     } catch {
@@ -37,7 +37,7 @@ export function useArtworkCatalog() {
     } finally {
       if (current === request.current) setLoading(false);
     }
-  }, [repository]);
+  }, [repository, availableSlots]);
   useEffect(() => {
     void reload();
     // Refresh signed URLs before their one-hour expiry, including suspended tabs.

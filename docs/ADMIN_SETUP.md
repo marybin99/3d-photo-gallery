@@ -10,7 +10,7 @@ Supabase가 없으면 기존 데모 전시가 열리고, 관리자 주소에서�
 2. 프로젝트 이름, DB 비밀번호, 사용할 리전을 지정하고 준비가 끝날 때까지 기다립니다.
 3. 프로젝트의 **Connect** 또는 **Settings → API Keys / Data API**에서 Project URL과 **Publishable key**를 확인합니다. 기존 프로젝트의 anon key도 지원합니다.
 
-이 앱에는 공개 클라이언트 키만 필요합니다. DB 비밀번호, secret key, service_role key는 `.env`의 `VITE_*` 항목이나 프런트엔드 코드에 넣지 않습니다. [Supabase API 키 안내](https://supabase.com/docs/guides/getting-started/api-keys)
+브라우저 앱에는 공개 클라이언트 키만 필요합니다. DB 비밀번호, secret key, service_role key는 `.env`의 `VITE_*` 항목이나 프런트엔드 코드에 넣지 않습니다. [Supabase API 키 안내](https://supabase.com/docs/guides/getting-started/api-keys)
 
 ## 2. DB와 Storage 초기 설정
 
@@ -22,6 +22,9 @@ Supabase **SQL Editor → New query**에서 다음 파일 내용을 각각 붙�
 4. [`supabase/room-expansion.sql`](../supabase/room-expansion.sql): 전시실 추가·삭제 함수, 운영자 권한, 전시실별 액자 위치.
 5. [`supabase/room-opening.sql`](../supabase/room-opening.sql): 전시실 오픈 여부와 열린 전시실의 작품·이미지 조회 정책.
 6. [`supabase/youtube-artworks.sql`](../supabase/youtube-artworks.sql): 사진 또는 유튜브 영상 작품 저장.
+7. [`supabase/guestbook-management.sql`](../supabase/guestbook-management.sql): 방명록 관리 함수.
+8. [`supabase/account-permissions.sql`](../supabase/account-permissions.sql): 계정별 역할·담당 전시실·접근 중지.
+9. [`supabase/account-deletion.sql`](../supabase/account-deletion.sql): 최고 관리자의 계정 삭제와 실패 후 재시도. 반드시 계정 권한 SQL 다음에 적용합니다.
 
 이미 작품 관리 설정을 끝낸 프로젝트는 **3·4·5·6번 파일을 순서대로 추가 실행**하면 됩니다. 기존 작품과 사진은 변경되지 않습니다.
 
@@ -40,7 +43,7 @@ Supabase **SQL Editor → New query**에서 다음 파일 내용을 각각 붙�
 
 ## 방명록 관리 연결
 
-기존 운영자 설정이 끝난 프로젝트에서는 Supabase **SQL Editor**에서 [`supabase/guestbook-management.sql`](../supabase/guestbook-management.sql)을 추가 실행하세요. `schema.sql`과 `artwork-management.sql`이 먼저 적용되어 있어야 합니다. 기존 글은 유지되며, 방명록 등록용 Edge Function은 재배포하지 않아도 됩니다.
+기존 운영자 설정이 끝난 프로젝트에서는 Supabase **SQL Editor**에서 [`supabase/guestbook-management.sql`](../supabase/guestbook-management.sql)을 추가 실행하고, 계정별 역할을 사용한다면 `account-permissions.sql`을 다시 마지막에 적용하세요. `schema.sql`과 `artwork-management.sql`이 먼저 적용되어 있어야 합니다. 기존 글은 유지되며, 방명록 등록용 Edge Function은 재배포하지 않아도 됩니다.
 
 관리자로 로그인한 뒤 상단 **방명록 관리** 메뉴를 엽니다.
 
@@ -53,34 +56,25 @@ Supabase **SQL Editor → New query**에서 다음 파일 내용을 각각 붙�
 
 SQL 적용 후 운영자 계정의 숨김·재공개·삭제, 일반 계정의 숨김 조회/관리 거부를 확인하세요. 자동 테스트는 API 요청과 실패 응답을 검증하며 실제 DB 정책 실행 검증을 대체하지 않습니다.
 
-## 3. 운영자 계정 생성과 권한 부여
+## 3. 첫 최고 관리자 계정 생성
 
-1. Supabase **Authentication → Users → Add user**에서 이메일과 비밀번호로 사용자를 생성합니다. 이 구현은 비밀번호 로그인용이므로, 초대 이메일을 보내는 방식보다 **Create user**에서 비밀번호를 직접 정하는 방식을 사용하세요.
-2. 계정이 로그인 가능한 확인 상태인지 확인합니다. 앱 안에는 회원가입 화면이 없습니다.
-3. SQL Editor에서 아래 이메일을 실제 계정 이메일로 바꿔 실행합니다.
+첫 최고 관리자만 Supabase Dashboard에서 한 번 등록합니다. 실제 이메일은 필요하지 않습니다.
+
+1. **Authentication → Users → Add user → Create user**에서 내부 식별 주소 `admin@accounts.gallery.invalid`와 비밀번호를 입력합니다. 이메일 확인 없이 사용 가능하도록 **Auto Confirm User**를 선택합니다.
+2. `account-permissions.sql`까지 적용한 뒤 SQL Editor에서 실행합니다.
 
 ```sql
-insert into public.gallery_admins (user_id)
-select id from auth.users where email = '실제운영자@example.com'
+insert into public.gallery_admins (user_id,role,is_active)
+select id,'owner',true from auth.users where email = 'admin@accounts.gallery.invalid'
 on conflict (user_id) do nothing;
 ```
 
-등록 여부는 다음 쿼리로 확인할 수 있습니다. 결과가 없으면 계정 이메일을 확인하세요.
+3. 앱에서 아이디 `admin`과 설정한 비밀번호로 로그인합니다.
+4. 이후 계정은 관리 화면의 **계정·권한 관리 → 계정 추가**에서 아이디·비밀번호로 생성합니다.
 
-```sql
-select u.id, u.email
-from public.gallery_admins a
-join auth.users u on u.id = a.user_id;
-```
-
-권한을 회수하려면 다음을 실행합니다. Auth 계정을 지우는 것과는 별개입니다.
-
-```sql
-delete from public.gallery_admins
-where user_id in (select id from auth.users where email = '실제운영자@example.com');
-```
-
-권한은 사용자 메타데이터나 이메일 문자열로 추정하지 않습니다. 별도 운영자 테이블에 등록된 사용자만 관리할 수 있습니다. [Supabase RLS 안내](https://supabase.com/docs/guides/database/postgres/row-level-security)
+내부 식별 주소는 Supabase Auth 연결용이며 메일을 발송하지 않습니다.
+기존에 실제 이메일로 만든 운영자도 기존 이메일·비밀번호로 계속 로그인할 수 있습니다.
+권한은 사용자 메타데이터가 아니라 `gallery_admins` 테이블로 검사합니다.
 
 ## 4. 로컬 환경변수 연결
 
@@ -93,7 +87,7 @@ VITE_SUPABASE_PUBLISHABLE_KEY=실제_publishable_key
 
 기존 anon key를 사용할 경우 `VITE_SUPABASE_PUBLISHABLE_KEY` 대신 `VITE_SUPABASE_ANON_KEY`를 설정합니다. 두 키를 모두 넣으면 publishable key가 우선합니다.
 
-개발 서버를 중단한 뒤 `npm run dev`로 다시 시작합니다. 터미널에 표시된 주소 뒤에 `/#/admin`을 붙이고, 3단계의 이메일·비밀번호로 로그인합니다. `.env`는 Git에 커밋하지 않습니다.
+개발 서버를 중단한 뒤 `npm run dev`로 다시 시작합니다. 터미널에 표시된 주소 뒤에 `/#/admin`을 붙이고, 3단계의 아이디·비밀번호로 로그인합니다. `.env`는 Git에 커밋하지 않습니다.
 
 ## 전시실 이름 변경
 
@@ -183,4 +177,119 @@ Supabase 프로젝트가 아직 없어 실서비스 Auth/DB/Storage 연동은 �
 
 ## 이번 작업에 포함되지 않은 것
 
-앱 내 회원가입·비밀번호 재설정·MFA, 원본 사진 보관은 별도 구현 대상입니다. 공개 방명록 등록용 Edge Function은 구현되어 있으며 별도 설정 안내에 따라 배포해야 합니다. 운영자 비밀번호 관리는 현재 Supabase Dashboard에서 수행합니다.
+공개 회원가입·비밀번호 재설정·MFA, 원본 사진 보관은 별도 구현 대상입니다. 최고 관리자가 앱에서 아이디·비밀번호로 계정을 생성할 수 있습니다. 공개 방명록 등록용 Edge Function은 구현되어 있으며 별도 설정 안내에 따라 배포해야 합니다. 운영자 비밀번호 관리는 현재 Supabase Dashboard에서 수행합니다.
+
+## 계정별 역할·담당 전시실 설정
+
+기존 설정과 `guestbook-management.sql`을 적용한 다음, **마지막으로**
+[`supabase/account-permissions.sql`](../supabase/account-permissions.sql)을 실행한 뒤
+[`supabase/account-deletion.sql`](../supabase/account-deletion.sql)을 적용하세요.
+이전부터 `gallery_admins`에 있던 운영자는 최초 적용 시 최고 관리자로 유지됩니다.
+새 역할은 로그인 계정의 DB 레코드로 판단하며 사용자 메타데이터를 신뢰하지 않습니다.
+
+| 기능 | 최고 관리자 | 전시 관리자 | 작품 편집자 |
+| --- | --- | --- | --- |
+| 계정 추가·삭제·권한 변경·접근 중지 | 전체 | 불가 | 불가 |
+| 전시실 이름·오픈 설정·빈 추가 전시실 삭제 | 전체 | 담당 전시실 | 불가 |
+| 전시실 추가 | 가능 | 전체 전시실 담당자만 | 불가 |
+| 작품 등록·내용·사진·영상 수정 | 전체 | 담당 전시실 | 담당 전시실 |
+| 기존 작품 공개 전환·배치 변경·삭제 | 전체 | 담당 전시실 | 불가 |
+| 방명록 관리·숨김 글 조회 | 가능 | 불가 | 불가 |
+
+작품 편집자는 새 작품을 비공개로 등록하고, 등록 시 첫 위치를 선택합니다.
+기존 작품의 공개 여부와 위치는 변경할 수 없습니다. 이미 공개된 작품의 제목·설명·사진·영상 수정은 즉시 공개 내용에 반영됩니다.
+최고 관리자는 모든 전시실을 관리합니다. 다른 역할은 전체 전시실 또는 일부 전시실을 지정하며,
+담당 전시실을 하나도 고르지 않으면 작품·전시실 관리 권한이 없습니다.
+전체 전시실 담당자는 나중에 추가한 전시실도 담당합니다. 전시실을 삭제하면 해당 전시실의 개별 담당 배정도 해제합니다. 같은 코드로 새 전시실을 만들어도 이전 담당자에게 자동 배정되지 않습니다.
+
+최초 설정 시 운영자 계정이 아직 없다면 위 **첫 최고 관리자 계정 생성** 절차를 따르세요.
+이후 `/#/admin/accounts`의 **계정·권한 관리**에서 계정을 추가하거나 권한을 수정합니다.
+접근 중지는 Auth 계정을 삭제하지 않고 관리 기능을 차단합니다.
+마지막 활성 최고 관리자의 권한 축소·접근 중지는 DB 함수에서 거부합니다.
+
+DB/Storage는 매 요청에 현재 권한을 검사합니다. 열린 관리 화면도 창 재활성화 및 1분 간격으로 권한을 갱신합니다.
+기발급 이미지 서명 URL은 기존 최대 1시간의 유효기간이 남을 수 있습니다.
+다른 사람이 올린 사진을 교체·삭제한 경우 작품 변경은 적용되지만 파일 정리 권한에 따라 안내가 표시될 수 있으며,
+최고 관리자가 Storage에서 사용하지 않는 파일을 정리할 수 있습니다.
+기존 초기 설정 SQL을 다시 실행했다면 이 권한 SQL과 계정 삭제 SQL을 **이 순서로 다시 마지막에 실행**하세요. 이전 SQL은 넓은 운영자 권한을 복원할 수 있습니다.
+
+### 앱에서 아이디·비밀번호로 계정 추가
+
+최고 관리자가 **계정 추가**에서 다음을 입력합니다.
+
+- 아이디: 영문·숫자·밑줄·하이픈 3~32자. 대소문자는 구분하지 않습니다.
+- 비밀번호와 확인: 8~72자. 프로젝트의 추가 비밀번호 정책도 적용됩니다.
+- 역할, 담당 전시실, 활성 여부.
+
+저장하면 설정한 아이디와 비밀번호로 바로 로그인할 수 있습니다.
+실제 이메일·메일 수신함·초대 메일·이메일 인증·SMTP·초대 리다이렉트 설정은 필요하지 않습니다.
+아이디는 생성 후 변경하지 않으며 기존 계정 편집은 역할·담당 범위·상태를 변경합니다.
+비밀번호는 생성 시에만 입력하고 화면에 저장·표시하지 않습니다.
+사용자에게 아이디와 비밀번호를 전달하는 작업은 운영자가 직접 수행합니다.
+
+계정 생성용 서버 함수를 한 번 배포하세요.
+
+```bash
+supabase functions deploy admin-create-account
+supabase secrets set ADMIN_ALLOWED_ORIGINS=https://실제전시관주소
+```
+
+로컬 테스트 주소도 필요하면 쉼표로 추가합니다(예: `http://localhost:5173`).
+허용 주소는 경로와 끝 슬래시 없는 origin입니다.
+함수는 서버 환경의 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`를 사용합니다.
+서비스 키를 `VITE_*` 환경변수나 브라우저에 추가하지 않습니다.
+Supabase Auth의 공개 신규 가입은 비활성화하고 관리자 생성 API로만 계정을 만드세요.
+
+구현은 아이디를 `아이디@accounts.gallery.invalid`라는 내부 Auth 식별자로 변환합니다.
+서버의 `auth.admin.createUser`에 비밀번호와 `email_confirm: true`를 전달하며 메일을 보내지 않습니다.
+중복 아이디는 거부하고 기존 계정의 비밀번호나 권한을 덮어쓰지 않습니다.
+DB 권한은 호출자의 현재 최고 관리자 권한을 다시 검사하여 등록합니다.
+등록 실패 시 이번 요청으로 만든, 아직 권한이 없는 Auth 계정만 정리합니다.
+
+이전 초대 구현의 `admin-invite`를 이미 배포했다면 해당 함수를 제거하세요.
+계정 생성에는 `admin-create-account`만 사용합니다.
+
+### 최고 관리자의 계정 삭제
+
+계정 삭제 기능을 추가로 적용하려면 SQL Editor에서
+[`supabase/account-deletion.sql`](../supabase/account-deletion.sql)을 실행한 뒤 아래 함수를 배포하세요.
+기존 `ADMIN_ALLOWED_ORIGINS` 설정을 그대로 사용합니다.
+
+```bash
+npx supabase functions deploy admin-delete-account --project-ref 프로젝트ID
+```
+
+**계정·권한 관리 → 계정 선택 → 이 계정 삭제 → 삭제하기**로 삭제합니다.
+확인창에는 계정 아이디와 복구 불가 안내가 표시됩니다. 취소하면 삭제하지 않습니다.
+현재 로그인한 계정과 마지막 활성 최고 관리자 계정은 서버에서 삭제를 거부합니다.
+삭제 요청의 계정 버전도 검사하므로, 다른 창에서 권한을 바꾼 계정을 이전 정보로 삭제할 수 없습니다.
+
+삭제를 시작하면 먼저 DB 관리 권한을 차단하고, 서버에서 Auth 계정을 삭제한 다음 운영 계정 목록에서 제거합니다.
+Auth는 작품 작성자 UUID와 Storage 파일 참조를 보존하는 soft delete를 사용합니다.
+기존 로그인 자격과 세션을 제거하며 등록 작품·사진·전시실·방명록은 삭제하지 않습니다.
+동작 근거는 [Supabase deleteUser 문서](https://supabase.com/docs/reference/javascript/auth-admin-deleteuser)를 참고하세요.
+
+중간에 통신이나 서버 처리가 실패하면 **삭제 진행 중 · 다시 시도 필요**로 표시합니다.
+이 계정은 관리 권한을 복구하거나 다른 역할로 변경할 수 없고, **계정 삭제 다시 시도**로 삭제를 완료할 수 있습니다.
+다시 시도할 때 이미 삭제된 Auth 계정에 대한 soft delete는 재실행 가능합니다.
+브라우저에는 서버용 키를 제공하지 않고, 삭제 확정 DB 함수는 `service_role`에만 허용합니다.
+
+### 이전 계정 변경 로그 제거 적용
+
+계정 변경 로그 화면과 저장·조회 기능은 제거했습니다.
+이미 이전 SQL을 적용한 프로젝트는 `account-permissions.sql` → `account-deletion.sql` 순서로 다시 실행하세요.
+계정 권한·삭제 함수에서 로그 저장을 제거한 뒤, 기존 로그 조회 함수와 로그 테이블·데이터를 정리합니다.
+삭제 재시도에 필요한 진행 상태와 계정 아이디만 유지합니다. 서버 함수 재배포는 필요하지 않습니다.
+
+### 적용 후 확인
+
+자동 테스트는 세션 전환·접근 중지·담당 범위와 계정 생성 핸들러의 권한 거부·중복 아이디·입력 검사·실패 정리를 확인합니다.
+실제 Supabase 정책과 계정 생성·로그인 검증은 SQL·함수 배포 후 아래 계정으로 진행하세요.
+
+- 최고 관리자: 계정 목록·방명록 조회 및 계정 권한 변경·삭제. 마지막 최고 관리자 접근 중지·삭제와 자기 계정 삭제 거부.
+- 계정 삭제: 취소 시 유지, 확인 시 로그인 불가와 목록 제거. 작품·사진 유지. 중간 실패 후 삭제 재시도.
+- B 전시실 담당 전시 관리자: B 작품·전시실 관리 가능. A/C 비공개 작품 접근·수정 및 방명록 관리 거부.
+- B 전시실 작품 편집자: 비공개 등록과 내용 수정 가능. 공개 전환·기존 배치 변경·작품 삭제·전시실 설정 거부.
+- 접근 중지 계정: DB/Storage 쓰기와 숨김·비공개 자료 조회 거부. 공개 관람은 일반 방문자와 동일.
+- 새 계정: 아이디·비밀번호·역할 지정 → 저장 → 로그아웃 → 새 아이디·비밀번호로 로그인. 잘못된 비밀번호와 중복 아이디는 거부되는지 확인.
+- 두 관리자 창에서 같은 계정 수정: 이전 버전 저장 거부. 다른 계정 권한으로 빠르게 전환해도 이전 권한이 유지되지 않는지 확인.

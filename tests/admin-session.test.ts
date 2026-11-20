@@ -8,6 +8,7 @@ test('admin hook waits for server permission, denies normal users and ignores a 
   let callback: ((event: string, session: unknown) => void) | undefined;
   let resolveRole: ((value: unknown) => void) | undefined;
   let unsubscribed = false;
+  let credentials: { email: string; password: string } | undefined;
   const client = {
     auth: {
       onAuthStateChange(fn: typeof callback) {
@@ -22,9 +23,13 @@ test('admin hook waits for server permission, denies normal users and ignores a 
           },
         };
       },
-      signInWithPassword: async () => ({
-        error: { message: 'invalid password' },
-      }),
+      signInWithPassword: async (input: {
+        email: string;
+        password: string;
+      }) => {
+        credentials = input;
+        return { error: { message: 'invalid password' } };
+      },
       signOut: async () => {
         callback?.('SIGNED_OUT', null);
         return { error: null };
@@ -80,9 +85,13 @@ test('admin hook waits for server permission, denies normal users and ignores a 
     assert.equal(result!.allowed, false);
     assert.equal(result!.loading, false);
     await assert.rejects(
-      () => result!.signIn('test@example.test', 'wrong'),
+      () => result!.signIn('Staff01', 'wrong'),
       /로그인하지 못했습니다/,
     );
+    assert.deepEqual(credentials, {
+      email: 'staff01@accounts.gallery.invalid',
+      password: 'wrong',
+    });
     const session = { user: { id: 'user-a', email: 'a@example.test' } };
     await act(async () => {
       callback?.('SIGNED_IN', session);
@@ -98,9 +107,24 @@ test('admin hook waits for server permission, denies normal users and ignores a 
       result!.retry();
     });
     await act(async () => {
-      resolveRole?.({ data: true, error: null });
+      resolveRole?.({
+        data: { role: 'manager', is_active: true, room_ids: ['B'] },
+        error: null,
+      });
     });
     assert.equal(result!.allowed, true);
+    assert.equal(result!.permissions?.role, 'manager');
+    assert.deepEqual(result!.permissions?.room_ids, ['B']);
+    await act(async () => {
+      result!.retry();
+    });
+    await act(async () => {
+      resolveRole?.({
+        data: { role: 'owner', is_active: false, room_ids: null },
+        error: null,
+      });
+    });
+    assert.equal(result!.allowed, false, 'Suspended owners must be denied');
     await act(async () => {
       callback?.('SIGNED_IN', {
         user: { id: 'user-b', email: 'b@example.test' },
@@ -116,7 +140,10 @@ test('admin hook waits for server permission, denies normal users and ignores a 
       await result!.signOut();
     });
     await act(async () => {
-      late?.({ data: true, error: null });
+      late?.({
+        data: { role: 'manager', is_active: true, room_ids: ['B'] },
+        error: null,
+      });
     });
     assert.equal(result!.session, null);
     assert.equal(

@@ -208,6 +208,10 @@
 .admin-library-heading h2 {
   margin: 0;
 }
+.admin-library-actions {
+  display: flex;
+  gap: 10px;
+}
 .admin-filter {
   margin-bottom: 20px;
 }
@@ -488,7 +492,9 @@
   border-color: #cda79e;
 }
 @media (min-width: 951px) {
-  .admin-room-forms { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-room-forms {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .admin-room-item {
@@ -513,7 +519,24 @@
   accent-color: #657451;
 }
 @media (max-width: 420px) {
-  .admin-room-item { padding: 12px; }
-  .admin-room-item form { flex-wrap: wrap; }
-  .admin-room-item form label { flex-basis: 100%; }
+  .admin-room-item {
+    padding: 12px;
+  }
+  .admin-room-item form {
+    flex-wrap: wrap;
+  }
+  .admin-room-item form label {
+    flex-basis: 100%;
+  }
+}
+
+.admin-scope-options {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #d6d0c4;
+  border-radius: 10px;
+}
+.admin-artwork strong {
+  overflow-wrap: anywhere;
 }

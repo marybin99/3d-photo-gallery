@@ -2,3 +2,10 @@ project_id = "photo-gallery"
 
 [functions.guestbook-submit]
 verify_jwt = false
+
+# The function validates the JWT with Auth.getUser and checks the DB role itself.
+[functions.admin-create-account]
+verify_jwt = false
+
+[functions.admin-delete-account]
+verify_jwt = false

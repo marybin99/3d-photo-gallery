@@ -26,6 +26,9 @@ import RoomSettings from './RoomSettings';
 import AdminGuestbook from './AdminGuestbook';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import './admin.css';
+import AdminAccounts from './AdminAccounts';
+import { accountLabel } from '../supabase/functions/_shared/adminAccount';
+import { canUseRoom, roleLabels, type AdminAccess } from './adminAccess';
 
 const emptyDraft: ArtworkDraft = {
   slot_id: '',
@@ -73,7 +76,7 @@ export default function AdminPage() {
 }
 function AdminSession({ client }: { client: SupabaseClient }) {
   const auth = useAdminSession(client);
-  const [email, setEmail] = useState(''),
+  const [username, setUsername] = useState(''),
     [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false),
     [error, setError] = useState('');
@@ -83,7 +86,7 @@ function AdminSession({ client }: { client: SupabaseClient }) {
     setBusy(true);
     setError('');
     try {
-      await auth.signIn(email, password);
+      await auth.signIn(username, password);
       setPassword('');
     } catch (reason) {
       setError(messageOf(reason));
@@ -105,12 +108,15 @@ function AdminSession({ client }: { client: SupabaseClient }) {
         <p>등록된 운영자 계정으로 로그인해 주세요.</p>
         <form onSubmit={login}>
           <label>
-            이메일
+            아이디
             <input
-              type="email"
+              type="text"
               autoComplete="username"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              autoCapitalize="none"
+              spellCheck={false}
+              placeholder="예: staff01"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
               required
               disabled={busy}
             />
@@ -156,7 +162,10 @@ function AdminSession({ client }: { client: SupabaseClient }) {
   return (
     <>
       <div className="admin-account">
-        <span>{auth.session.user.email}</span>
+        <span>
+          {accountLabel(auth.session.user.email)} ·{' '}
+          {auth.permissions && roleLabels[auth.permissions.role]}
+        </span>
         <button
           disabled={busy}
           onClick={() => {
@@ -173,9 +182,11 @@ function AdminSession({ client }: { client: SupabaseClient }) {
         </p>
       )}
       <AdminDashboard
-        key={auth.session.user.id}
+        key={`${auth.session.user.id}:${JSON.stringify(auth.permissions)}`}
         client={client}
         userId={auth.session.user.id}
+        access={auth.permissions!}
+        onAccessChange={auth.retry}
       />
     </>
   );
@@ -183,21 +194,29 @@ function AdminSession({ client }: { client: SupabaseClient }) {
 function AdminDashboard({
   client,
   userId,
+  access,
+  onAccessChange,
 }: {
   client: SupabaseClient;
   userId: string;
+  access: AdminAccess;
+  onAccessChange: () => void;
 }) {
-  const [section, setSection] = useState(() =>
-    window.location.hash.replace(/\/$/, '') === '#/admin/guestbook' ? 'guestbook' : 'artworks',
-  );
+  const [section, setSection] = useState('artworks');
   useEffect(() => {
-    const navigate = () => setSection(
-      window.location.hash.replace(/\/$/, '') === '#/admin/guestbook' ? 'guestbook' : 'artworks',
-    );
+    const navigate = () => {
+      const requested = window.location.hash.replace(/\/$/, '').split('/')[2];
+      setSection(
+        access.role === 'owner' &&
+          (requested === 'guestbook' || requested === 'accounts')
+          ? requested
+          : 'artworks',
+      );
+    };
     navigate();
     window.addEventListener('hashchange', navigate);
     return () => window.removeEventListener('hashchange', navigate);
-  }, []);
+  }, [access.role]);
   return (
     <>
       <nav className="admin-navigation" aria-label="관리 메뉴">
@@ -208,32 +227,69 @@ function AdminDashboard({
         >
           작품 관리
         </a>
-        <a
-          className="admin-button"
-          href="#/admin/guestbook"
-          aria-current={section === 'guestbook' ? 'page' : undefined}
-        >
-          방명록 관리
-        </a>
+        {access.role === 'owner' && (
+          <>
+            <a
+              className="admin-button"
+              href="#/admin/guestbook"
+              aria-current={section === 'guestbook' ? 'page' : undefined}
+            >
+              방명록 관리
+            </a>
+            <a
+              className="admin-button"
+              href="#/admin/accounts"
+              aria-current={section === 'accounts' ? 'page' : undefined}
+            >
+              계정·권한 관리
+            </a>
+          </>
+        )}
       </nav>
       <div hidden={section !== 'artworks'}>
-        <ArtworkDashboard client={client} userId={userId} />
+        <ArtworkDashboard client={client} userId={userId} access={access} />
       </div>
-      {section === 'guestbook' && <AdminGuestbook client={client} />}
+      {section === 'guestbook' && access.role === 'owner' && (
+        <AdminGuestbook client={client} />
+      )}
+      {section === 'accounts' && access.role === 'owner' && (
+        <AdminAccounts
+          client={client}
+          currentUserId={userId}
+          onAccessChange={onAccessChange}
+        />
+      )}
     </>
   );
 }
 function ArtworkDashboard({
   client,
   userId,
+  access,
 }: {
   client: SupabaseClient;
   userId: string;
+  access: AdminAccess;
 }) {
-  const rooms = useRoomNames(client);
+  const allRooms = useRoomNames(client);
+  const permittedRecords = allRooms.records.filter((room) =>
+    canUseRoom(access, room.id),
+  );
+  const rooms = {
+    ...allRooms,
+    ids: allRooms.ids.filter((id) => canUseRoom(access, id)),
+    records: permittedRecords,
+  };
+  const canManage = access.role !== 'editor';
   const roomKey = rooms.ids.join(',');
-  const slots = useMemo(() => artworkSlots(roomKey.split(',')), [roomKey]);
-  const repository = useMemo(() => createArtworkRepository(client, slots), [client, slots]);
+  const slots = useMemo(
+    () => (roomKey ? artworkSlots(roomKey.split(',')) : []),
+    [roomKey],
+  );
+  const repository = useMemo(
+    () => createArtworkRepository(client, slots),
+    [client, slots],
+  );
   const [records, setRecords] = useState<ArtworkRecord[]>([]),
     [urls, setUrls] = useState(new Map<string, string>());
   const [loading, setLoading] = useState(true),
@@ -243,7 +299,7 @@ function ArtworkDashboard({
     [notice, setNotice] = useState('');
   const [editing, setEditing] = useState<ArtworkRecord | null>(null),
     [draft, setDraft] = useState({ ...emptyDraft });
-  const [mediaType,setMediaType]=useState<'image'|'youtube'>('image');
+  const [mediaType, setMediaType] = useState<'image' | 'youtube'>('image');
   const [file, setFile] = useState<File | null>(null),
     [preview, setPreview] = useState('');
   const [filter, setFilter] = useState('ALL'),
@@ -254,7 +310,7 @@ function ArtworkDashboard({
     mutation = useRef(false);
   useEffect(() => {
     if (filter !== 'ALL' && !rooms.ids.includes(filter)) setFilter('ALL');
-    if (draft.slot_id && !slots.some(slot => slot.id === draft.slot_id)) {
+    if (draft.slot_id && !slots.some((slot) => slot.id === draft.slot_id)) {
       setEditing(null);
       setDraft({ ...emptyDraft });
       setFile(null);
@@ -267,7 +323,9 @@ function ArtworkDashboard({
     setLoading(true);
     setError('');
     try {
-      const items = await repository.list(false);
+      const items = (await repository.list(false)).filter((record) =>
+        slots.some((slot) => slot.id === record.slot_id),
+      );
       const images = await repository.imageUrls(items);
       if (mounted.current && id === request.current) {
         setRecords(items);
@@ -280,7 +338,7 @@ function ArtworkDashboard({
     } finally {
       if (mounted.current && id === request.current) setLoading(false);
     }
-  }, [repository]);
+  }, [repository, slots]);
   useEffect(() => {
     mounted.current = true;
     void load();
@@ -317,7 +375,7 @@ function ArtworkDashboard({
   };
   const edit = (record: ArtworkRecord) => {
     setEditing(record);
-    setMediaType(record.youtube_url?'youtube':'image');
+    setMediaType(record.youtube_url ? 'youtube' : 'image');
     setDraft({
       youtube_url: record.youtube_url ?? '',
       slot_id: record.slot_id,
@@ -334,15 +392,33 @@ function ArtworkDashboard({
   async function save(event: FormEvent) {
     event.preventDefault();
     if (mutation.current || !ready) return;
+    if (
+      !canManage &&
+      (draft.is_published !== (editing?.is_published ?? false) ||
+        (editing && draft.slot_id !== editing.slot_id))
+    ) {
+      setError('공개 여부와 작품 배치는 전시 관리자만 변경할 수 있습니다.');
+      return;
+    }
     mutation.current = true;
     setBusy(true);
     setError('');
     setNotice('');
     setConfirmDelete(false);
     try {
-      if(mediaType==='youtube'&&!draft.youtube_url?.trim())throw new Error('유튜브 링크를 입력해 주세요.');
-      const image = mediaType==='image'&&file ? await prepareArtworkImage(file) : null;
-      const result = await repository.save(userId, {...draft,youtube_url:mediaType==='youtube'?draft.youtube_url:''}, editing, image);
+      if (mediaType === 'youtube' && !draft.youtube_url?.trim())
+        throw new Error('유튜브 링크를 입력해 주세요.');
+      const image =
+        mediaType === 'image' && file ? await prepareArtworkImage(file) : null;
+      const result = await repository.save(
+        userId,
+        {
+          ...draft,
+          youtube_url: mediaType === 'youtube' ? draft.youtube_url : '',
+        },
+        editing,
+        image,
+      );
       if (!mounted.current) return;
       const next = [
         ...records.filter((record) => record.id !== result.record.id),
@@ -363,7 +439,7 @@ function ArtworkDashboard({
     }
   }
   async function remove() {
-    if (!editing || mutation.current) return;
+    if (!editing || mutation.current || !canManage) return;
     mutation.current = true;
     setBusy(true);
     setError('');
@@ -383,10 +459,23 @@ function ArtworkDashboard({
       if (mounted.current) setBusy(false);
     }
   }
-  let videoPreview='';
-  try{if(draft.youtube_url)videoPreview=youtubeThumbnail(youtubeVideoId(draft.youtube_url))}catch{/* Show a hint until the URL is complete. */}
-  const currentImage = mediaType==='youtube'?videoPreview:preview || (editing?.image_path ? urls.get(editing.image_path) : '');
-  const recordImage=(record:ArtworkRecord)=>record.youtube_url?youtubeThumbnail(youtubeVideoId(record.youtube_url)):record.image_path?urls.get(record.image_path):'';
+  let videoPreview = '';
+  try {
+    if (draft.youtube_url)
+      videoPreview = youtubeThumbnail(youtubeVideoId(draft.youtube_url));
+  } catch {
+    /* Show a hint until the URL is complete. */
+  }
+  const currentImage =
+    mediaType === 'youtube'
+      ? videoPreview
+      : preview || (editing?.image_path ? urls.get(editing.image_path) : '');
+  const recordImage = (record: ArtworkRecord) =>
+    record.youtube_url
+      ? youtubeThumbnail(youtubeVideoId(record.youtube_url))
+      : record.image_path
+        ? urls.get(record.image_path)
+        : '';
   const visible = records.filter(
     (record) =>
       filter === 'ALL' ||
@@ -398,16 +487,32 @@ function ArtworkDashboard({
         <div>
           <span className="eyebrow">CURATE YOUR EXHIBITION</span>
           <h1>작품 관리</h1>
-          <p>{rooms.ids.length}개 전시실, {slots.length}개의 액자에 사진과 이야기를 전시해 보세요.</p>
+          <p>
+            {rooms.ids.length}개 전시실, {slots.length}개의 액자에 사진과
+            이야기를 전시해 보세요.
+          </p>
         </div>
         <a className="admin-button" href="/">
           전시관 보기 ↗
         </a>
       </div>
-      <RoomSettings rooms={rooms} />
+      <p className="admin-help">
+        {canManage
+          ? '담당 전시실의 작품과 전시실 설정을 관리할 수 있습니다.'
+          : '담당 전시실의 작품을 등록·수정할 수 있습니다. 공개 전환·배치 변경·삭제는 전시 관리자에게 요청해 주세요.'}
+      </p>
+      {canManage && (
+        <RoomSettings
+          rooms={rooms}
+          canCreate={access.role === 'owner' || access.room_ids === null}
+        />
+      )}
       <div className="admin-summary">
         <span>
-          등록 <b>{records.length} / {slots.length}</b>
+          등록{' '}
+          <b>
+            {records.length} / {slots.length}
+          </b>
         </span>
         <span>
           공개 <b>{records.filter((row) => row.is_published).length}</b>
@@ -486,7 +591,10 @@ function ArtworkDashboard({
                 <span>
                   <strong>{record.title}</strong>
                   <small>{slotLabel(record.slot_id, rooms.names, slots)}</small>
-                  <em>{record.youtube_url?'영상 · ':''}{record.is_published ? '공개' : '비공개'}</em>
+                  <em>
+                    {record.youtube_url ? '영상 · ' : ''}
+                    {record.is_published ? '공개' : '비공개'}
+                  </em>
                 </span>
               </button>
             ))}
@@ -500,6 +608,7 @@ function ArtworkDashboard({
                 전시 위치
                 <select
                   value={draft.slot_id}
+                  disabled={!canManage && !!editing}
                   onChange={(event) =>
                     setDraft({ ...draft, slot_id: event.target.value })
                   }
@@ -536,44 +645,79 @@ function ArtworkDashboard({
                   ))}
                 </select>
               </label>
-              <label>작품 유형
-                <select value={mediaType} onChange={event=>{
-                  setMediaType(event.target.value as 'image'|'youtube');setFile(null);
-                  setDraft({...draft,youtube_url:''});if(fileInput.current)fileInput.current.value='';
-                }}><option value="image">사진</option><option value="youtube">유튜브 영상</option></select>
-              </label>
-              {mediaType==='youtube'?<>
-                <label>유튜브 링크<input type="url" value={draft.youtube_url??''} onChange={event=>setDraft({...draft,youtube_url:event.target.value})} required maxLength={2048} placeholder="https://www.youtube.com/watch?v=…"/></label>
-                <p className="admin-help">전시관에 입장하면 표시되는 영상이 음소거로 자동 재생됩니다. 영상 업로드는 필요하지 않습니다.</p>
-              </>:<><label>
-                사진 {editing ? '교체 (선택)' : '파일'}
-                <input
-                  ref={fileInput}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  required={!editing || !!editing.youtube_url}
+              <label>
+                작품 유형
+                <select
+                  value={mediaType}
                   onChange={(event) => {
-                    const next = event.target.files?.[0] ?? null;
-                    try {
-                      if (next) validateImageFile(next);
-                      setFile(next);
-                      setError('');
-                    } catch (reason) {
-                      setError(messageOf(reason));
-                      setFile(null);
-                      event.target.value = '';
-                    }
+                    setMediaType(event.target.value as 'image' | 'youtube');
+                    setFile(null);
+                    setDraft({ ...draft, youtube_url: '' });
+                    if (fileInput.current) fileInput.current.value = '';
                   }}
-                />
+                >
+                  <option value="image">사진</option>
+                  <option value="youtube">유튜브 영상</option>
+                </select>
               </label>
-              <p className="admin-help">
-                JPG·PNG·WebP, 최대 10MB. 긴 변 1,920px 이내로 조정해 저장합니다.
-              </p></>}
+              {mediaType === 'youtube' ? (
+                <>
+                  <label>
+                    유튜브 링크
+                    <input
+                      type="url"
+                      value={draft.youtube_url ?? ''}
+                      onChange={(event) =>
+                        setDraft({ ...draft, youtube_url: event.target.value })
+                      }
+                      required
+                      maxLength={2048}
+                      placeholder="https://www.youtube.com/watch?v=…"
+                    />
+                  </label>
+                  <p className="admin-help">
+                    전시관에 입장하면 표시되는 영상이 음소거로 자동 재생됩니다.
+                    영상 업로드는 필요하지 않습니다.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <label>
+                    사진 {editing ? '교체 (선택)' : '파일'}
+                    <input
+                      ref={fileInput}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      required={!editing || !!editing.youtube_url}
+                      onChange={(event) => {
+                        const next = event.target.files?.[0] ?? null;
+                        try {
+                          if (next) validateImageFile(next);
+                          setFile(next);
+                          setError('');
+                        } catch (reason) {
+                          setError(messageOf(reason));
+                          setFile(null);
+                          event.target.value = '';
+                        }
+                      }}
+                    />
+                  </label>
+                  <p className="admin-help">
+                    JPG·PNG·WebP, 최대 10MB. 긴 변 1,920px 이내로 조정해
+                    저장합니다.
+                  </p>
+                </>
+              )}
               <div className="admin-image-preview">
                 {currentImage ? (
                   <img src={currentImage} alt="선택한 작품 미리보기" />
                 ) : (
-                  <span>{mediaType==='youtube'?'유튜브 링크를 입력하면 썸네일이 표시됩니다.':'사진을 선택하면 미리보기가 표시됩니다.'}</span>
+                  <span>
+                    {mediaType === 'youtube'
+                      ? '유튜브 링크를 입력하면 썸네일이 표시됩니다.'
+                      : '사진을 선택하면 미리보기가 표시됩니다.'}
+                  </span>
                 )}
               </div>
               <label>
@@ -602,6 +746,7 @@ function ArtworkDashboard({
                 <input
                   type="checkbox"
                   checked={draft.is_published}
+                  disabled={!canManage}
                   onChange={(event) =>
                     setDraft({ ...draft, is_published: event.target.checked })
                   }
@@ -621,23 +766,28 @@ function ArtworkDashboard({
               </div>
             </fieldset>
           </form>
-          {editing && !confirmDelete && (
+          {canManage && editing && !confirmDelete && (
             <button
               className="admin-delete"
               disabled={busy || loading}
-              onClick={() => { setError(''); setConfirmDelete(true); }}
+              onClick={() => {
+                setError('');
+                setConfirmDelete(true);
+              }}
             >
               이 작품 삭제
             </button>
           )}
-          {editing && confirmDelete && (
+          {canManage && editing && confirmDelete && (
             <DeleteConfirmDialog
               busy={busy}
               error={error}
               onCancel={() => setConfirmDelete(false)}
               onConfirm={() => void remove()}
             >
-              ‘{editing.title}’ 작품{editing.youtube_url?'의 영상 연결':'과 사진 파일'}을 삭제합니다. 삭제하면 복구할 수 없습니다.
+              ‘{editing.title}’ 작품
+              {editing.youtube_url ? '의 영상 연결' : '과 사진 파일'}을
+              삭제합니다. 삭제하면 복구할 수 없습니다.
             </DeleteConfirmDialog>
           )}
         </section>

@@ -428,6 +428,52 @@
   border-color: #594b3f;
   color: white;
 }
+
+.admin-music {
+  max-width: 540px;
+  margin: 0 auto;
+}
+.admin-music fieldset {
+  display: grid;
+  justify-items: start;
+  gap: 14px;
+  padding: 0;
+  margin: 0 0 14px;
+  border: 0;
+  min-inline-size: 0;
+}
+.admin-music label {
+  width: 100%;
+}
+.admin-music audio {
+  width: 100%;
+  max-width: 340px;
+}
+.admin-music-tracks {
+  padding-inline-start: 24px;
+}
+.admin-music-tracks li {
+  padding: 10px 0;
+  border-top: 1px solid #e3d7cb;
+}
+.admin-music-track {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.admin-music-track > div {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.admin-music-track audio {
+  display: block;
+  margin-top: 6px;
+}
+.admin-music-legacy button {
+  margin-inline-start: 10px;
+}
 .admin-guestbook-list {
   display: grid;
   margin-top: 20px;

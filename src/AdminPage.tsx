@@ -25,6 +25,7 @@ import { roomName } from './roomModel';
 import { DEFAULT_FRAME_COLOR } from './galleryColors';
 import RoomSettings from './RoomSettings';
 import AdminGuestbook from './AdminGuestbook';
+import AdminMusic from './AdminMusic';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import './admin.css';
 import AdminAccounts from './AdminAccounts';
@@ -205,12 +206,15 @@ function AdminDashboard({
   onAccessChange: () => void;
 }) {
   const [section, setSection] = useState('artworks');
+  const canManageMusic =
+    access.role !== 'editor' && canUseRoom(access, 'LOBBY');
   useEffect(() => {
     const navigate = () => {
       const requested = window.location.hash.replace(/\/$/, '').split('/')[2];
       setSection(
-        access.role === 'owner' &&
-          (requested === 'guestbook' || requested === 'accounts')
+        (canManageMusic && requested === 'music') ||
+          (access.role === 'owner' &&
+            (requested === 'guestbook' || requested === 'accounts'))
           ? requested
           : 'artworks',
       );
@@ -218,7 +222,7 @@ function AdminDashboard({
     navigate();
     window.addEventListener('hashchange', navigate);
     return () => window.removeEventListener('hashchange', navigate);
-  }, [access.role]);
+  }, [access.role, canManageMusic]);
   return (
     <>
       <nav className="admin-navigation" aria-label="관리 메뉴">
@@ -229,6 +233,15 @@ function AdminDashboard({
         >
           작품 관리
         </a>
+        {canManageMusic && (
+          <a
+            className="admin-button"
+            href="#/admin/music"
+            aria-current={section === 'music' ? 'page' : undefined}
+          >
+            배경음악
+          </a>
+        )}
         {access.role === 'owner' && (
           <>
             <a
@@ -251,6 +264,9 @@ function AdminDashboard({
       <div hidden={section !== 'artworks'}>
         <ArtworkDashboard client={client} userId={userId} access={access} />
       </div>
+      {section === 'music' && canManageMusic && (
+        <AdminMusic client={client} userId={userId} />
+      )}
       {section === 'guestbook' && access.role === 'owner' && (
         <AdminGuestbook client={client} />
       )}
@@ -717,7 +733,9 @@ function ArtworkDashboard({
                 <input
                   type="color"
                   value={draft.frame_color ?? DEFAULT_FRAME_COLOR}
-                  onChange={(event) => setDraft({ ...draft, frame_color: event.target.value })}
+                  onChange={(event) =>
+                    setDraft({ ...draft, frame_color: event.target.value })
+                  }
                 />
               </label>
               <div className="admin-image-preview">
@@ -725,7 +743,9 @@ function ArtworkDashboard({
                   <img
                     src={currentImage}
                     alt="선택한 작품 미리보기"
-                    style={{ borderColor: draft.frame_color ?? DEFAULT_FRAME_COLOR }}
+                    style={{
+                      borderColor: draft.frame_color ?? DEFAULT_FRAME_COLOR,
+                    }}
                   />
                 ) : (
                   <span>

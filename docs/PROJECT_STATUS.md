@@ -10,14 +10,16 @@
 
 | 파일 | 역할 |
 | --- | --- |
-| `src/main.tsx` | 전시 UI, 미니맵, 작품 상세, 방명록, 모바일 입력 |
-| `src/Gallery.tsx` | 전시장 지오메트리, 액자, 캐릭터, 이동 경계, 추적 카메라 |
-| `src/Character.tsx` | 관절 캐릭터, 보행·정지 전환·대기 애니메이션 |
-| `src/locomotion.ts` | 실제 이동량에 따른 몸 방향 회전과 보행 상태 |
-| `src/layout.ts` | 로비·전시실 좌표, 벽, 책상, 이동 판정, 공통 시작 위치 |
-| `src/data.ts` | 36개 전시 위치의 정보와 3D 배치 (12개 데모 이미지 재사용) |
-| `src/supabase.ts` | 선택적 Supabase 연결과 로컬 방명록 저장 |
-| `src/styles.css` | 베이지 계열 UI와 모바일 레이아웃 |
+| `src/main.tsx` | 앱 진입점과 관람·관리자 화면 전환 |
+| `src/pages/GalleryPage.tsx` | 전시 UI, 미니맵, 작품 상세, 방명록, 모바일 입력 |
+| `src/features/gallery/components/Gallery.tsx` | 전시장 지오메트리, 액자, 캐릭터, 이동 경계, 추적 카메라 |
+| `src/features/gallery/components/Character.tsx` | 관절 캐릭터, 보행·정지 전환·대기 애니메이션 |
+| `src/features/gallery/locomotion.ts` | 실제 이동량에 따른 몸 방향 회전과 보행 상태 |
+| `src/features/gallery/layout.ts` | 로비·전시실 좌표, 벽, 책상, 이동 판정, 공통 시작 위치 |
+| `src/features/artworks/artworkSlots.ts` | 36개 전시 위치의 정보와 3D 배치 (12개 데모 이미지 재사용) |
+| `src/shared/lib/supabase.ts` | 선택적 Supabase 연결 |
+| `src/features/guestbook/demoGuestbook.ts` | 데모 방명록의 브라우저 저장 |
+| `src/shared/styles/global.css` | 베이지 계열 UI와 모바일 레이아웃 |
 | `public/artworks/` | 데모 SVG 12개; 실제 사진으로 교체 필요 |
 | `supabase/schema.sql` | 방명록 테이블과 공개 글 조회 RLS 정책 |
 
@@ -76,11 +78,11 @@ README에 기록된 다음 단계이며, 이전 공유 대화에서 최종 확�
 
 ## 초기 카메라 거리
 
-로비 시작 위치를 `(0, 4.5)`로 옮겨 뒤쪽 벽과 추적 카메라 사이의 여유를 확보했습니다. Canvas 초기 카메라와 이동 중 추적 카메라는 `src/camera.ts`의 같은 좌표 계산을 사용합니다. 첫 프레임과 로비 복귀 시 카메라를 추적 위치로 바로 맞춥니다. 시작 시 카메라 시선 경로가 장애물에 막히지 않는 회귀 검사를 포함합니다.
+로비 시작 위치를 `(0, 4.5)`로 옮겨 뒤쪽 벽과 추적 카메라 사이의 여유를 확보했습니다. Canvas 초기 카메라와 이동 중 추적 카메라는 `src/features/gallery/camera.ts`의 같은 좌표 계산을 사용합니다. 첫 프레임과 로비 복귀 시 카메라를 추적 위치로 바로 맞춥니다. 시작 시 카메라 시선 경로가 장애물에 막히지 않는 회귀 검사를 포함합니다.
 
 ## 작품 관리 구현
 
-`src/AdminPage.tsx`에 운영자 로그인과 등록·편집·공개/비공개·삭제 화면을 구현했습니다. DB·Storage RLS는 `supabase/artwork-management.sql`에 정의하고, `artworkRepository.ts`에서 업로드·DB 저장·이전 파일 정리와 동시 수정 검사를 처리합니다. `useArtworkCatalog.ts`로 공개 작품과 서명 이미지 URL을 전시관에 로딩합니다. 사진 종횡비를 보존하고 개별 이미지 로딩 오류가 전시관 전체를 중단하지 않도록 했습니다. 상세 연결 절차와 실서비스 확인 범위는 [관리자 설정 안내](ADMIN_SETUP.md)에 있습니다. Supabase 프로젝트가 아직 없어 실제 서비스 연결은 미완료입니다.
+`src/pages/AdminPage.tsx`에 운영자 로그인과 등록·편집·공개/비공개·삭제 화면을 구현했습니다. DB·Storage RLS는 `supabase/artwork-management.sql`에 정의하고, `artworkRepository.ts`에서 업로드·DB 저장·이전 파일 정리와 동시 수정 검사를 처리합니다. `useArtworkCatalog.ts`로 공개 작품과 서명 이미지 URL을 전시관에 로딩합니다. 사진 종횡비를 보존하고 개별 이미지 로딩 오류가 전시관 전체를 중단하지 않도록 했습니다. 상세 연결 절차와 실서비스 확인 범위는 [관리자 설정 안내](ADMIN_SETUP.md)에 있습니다. Supabase 프로젝트가 아직 없어 실제 서비스 연결은 미완료입니다.
 
 ## 전시실 이름과 빈 액자
 
@@ -88,7 +90,7 @@ README에 기록된 다음 단계이며, 이전 공유 대화에서 최종 확�
 
 ## 공개 방명록 등록
 
-`src/Guestbook.tsx`로 작성·목록 UI를 분리하고 공개 등록 폼을 연결했습니다. `supabase/functions/guestbook-submit`에서 입력·허용 Origin·크기·숨김 필드·선택적 Turnstile을 검사합니다. DB 함수는 요청 중복과 횟수를 원자적으로 처리합니다. 적용 절차는 [방명록 설정 안내](GUESTBOOK_SETUP.md)에 있습니다. 아직 실제 Edge Function 배포와 SQL 실행은 검증하지 않았습니다.
+`src/features/guestbook/components/Guestbook.tsx`로 작성·목록 UI를 분리하고 공개 등록 폼을 연결했습니다. `supabase/functions/guestbook-submit`에서 입력·허용 Origin·크기·숨김 필드·선택적 Turnstile을 검사합니다. DB 함수는 요청 중복과 횟수를 원자적으로 처리합니다. 적용 절차는 [방명록 설정 안내](GUESTBOOK_SETUP.md)에 있습니다. 아직 실제 Edge Function 배포와 SQL 실행은 검증하지 않았습니다.
 
 
 ## 방명록 관리

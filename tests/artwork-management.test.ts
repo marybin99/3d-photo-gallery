@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createClient } from '@supabase/supabase-js';
-import { createArtworkRepository } from '../src/artworkRepository.ts';
+import { createArtworkRepository } from '../src/features/artworks/artworkRepository.ts';
 import {
   firstAvailableSlot,
   imageSize,
@@ -10,8 +10,8 @@ import {
   validateDraft,
   validateImageFile,
   type ArtworkRecord,
-} from '../src/artworkModel.ts';
-import { artworks } from '../src/data.ts';
+} from '../src/features/artworks/artworkModel.ts';
+import { artworks } from '../src/features/artworks/artworkSlots.ts';
 
 const user = '11111111-1111-4111-8111-111111111111';
 const oldPath = `${user}/22222222-2222-4222-8222-222222222222.webp`;

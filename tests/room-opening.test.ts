@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { createClient } from '@supabase/supabase-js'
-import { createGalleryLayout, canStand, moveAndSlide, reconcileGalleryPose, SPAWN } from '../src/layout.ts'
-import { openRoomIds, type RoomRecord } from '../src/roomModel.ts'
-import { createRoomRepository } from '../src/roomRepository.ts'
-import { createCurtainGeometry } from '../src/curtainGeometry.ts'
+import { createGalleryLayout, canStand, moveAndSlide, reconcileGalleryPose, SPAWN } from '../src/features/gallery/layout.ts'
+import { openRoomIds } from '../src/features/rooms/roomModel.ts'
+import type { RoomRecord } from '../src/features/rooms/types.ts'
+import { createRoomRepository } from '../src/features/rooms/roomRepository.ts'
+import { createCurtainGeometry } from '../src/features/gallery/curtainGeometry.ts'
 
 const ids=['A','B','C','D','E','F']
 test('closed entrances block walking in every orientation while the corridor and open rooms remain reachable',()=>{

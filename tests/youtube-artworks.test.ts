@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { createClient } from '@supabase/supabase-js'
-import { youtubeVideoId, normalizeYoutubeUrl } from '../src/youtubeModel.ts'
-import { recordToArtwork } from '../src/artworkModel.ts'
-import { artworks } from '../src/data.ts'
-import { createArtworkRepository } from '../src/artworkRepository.ts'
+import { youtubeVideoId, normalizeYoutubeUrl } from '../src/features/youtube/youtubeModel.ts'
+import { fillArtworkSlots, recordToArtwork } from '../src/features/artworks/artworkModel.ts'
+import { artworks } from '../src/features/artworks/artworkSlots.ts'
+import { createArtworkRepository } from '../src/features/artworks/artworkRepository.ts'
 
 const videoId='M7lc1UVf-VE'
 const url=`https://www.youtube.com/watch?v=${videoId}`
@@ -57,4 +57,20 @@ test('photo-to-video conversion cleans the old photo only after the DB save; del
   const failed=repository(true)
   await assert.rejects(()=>failed.api.save('admin',draft,{...record,youtube_url:null,image_path:'old.webp'},null))
   assert.equal(failed.calls.length,1)
+})
+
+test('changing the frame color preserves existing media and only colors the occupied frame',async()=>{
+  for(const saved of [record,{...record, youtube_url:null, image_path:'photo.webp'}]){
+    const {api,calls}=repository()
+    const edit={...draft,youtube_url:saved.youtube_url??'',frame_color:'#23ADEF'}
+    await assert.rejects(()=>api.save('admin',{...edit,frame_color:'#abc'},saved,null),/#RRGGBB/)
+    const {record:updated}=await api.save('admin',edit,saved,null)
+    assert.equal(calls.length,1)
+    assert.equal(calls[0].method,'PATCH')
+    assert.equal(updated.image_path,saved.image_path)
+    assert.equal(updated.youtube_url,saved.youtube_url)
+    assert.equal(updated.frame_color,'#23adef')
+    const frames=fillArtworkSlots([recordToArtwork(updated,'photo-url')])
+    assert.deepEqual(frames.filter(art=>art.frameColor).map(art=>[art.id,art.frameColor]),[['05','#23adef']])
+  }
 })

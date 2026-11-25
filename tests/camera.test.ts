@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { Box3, Ray, Vector3 } from 'three'
-import { followCameraPosition, CAMERA_LOOK_HEIGHT } from '../src/camera.ts'
-import { SPAWN, obstacles, areaAt, canStand } from '../src/layout.ts'
+import { followCameraPosition, CAMERA_LOOK_HEIGHT } from '../src/features/gallery/camera.ts'
+import { SPAWN, obstacles, areaAt, canStand } from '../src/features/gallery/layout.ts'
 
 test('initial lobby view has full camera distance without wall compression',()=>{
   const position=new Vector3(...followCameraPosition(SPAWN))

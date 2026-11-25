@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { createClient } from '@supabase/supabase-js'
-import { defaultRoomNames, mapNameLines, namesFromRecords, roomName, validateRoomName } from '../src/roomModel.ts'
-import { fillArtworkSlots, slotLabel } from '../src/artworkModel.ts'
-import { artworks } from '../src/data.ts'
-import { createRoomRepository } from '../src/roomRepository.ts'
+import { defaultRoomNames, mapNameLines, namesFromRecords, roomName, validateRoomName } from '../src/features/rooms/roomModel.ts'
+import { fillArtworkSlots, slotLabel } from '../src/features/artworks/artworkModel.ts'
+import { artworks } from '../src/features/artworks/artworkSlots.ts'
+import { createRoomRepository } from '../src/features/rooms/roomRepository.ts'
 
 test('room names trim spaces, reject empty or oversized names and retain stable room codes',()=>{
   assert.equal(validateRoomName('  계절의 기억  '),'계절의 기억')
@@ -50,6 +50,14 @@ test('room rename uses the existing identifier and version without writing artwo
   assert.deepEqual(JSON.parse(calls[0].body),{name:'봄의 기록'})
   assert.equal(calls[0].url.searchParams.get('id'),'eq.B')
   assert.equal(calls[0].url.searchParams.get('updated_at'),`eq.${record.updated_at}`)
+  await createRoomRepository(client).rename(record, record.name, '#123ABC')
+  assert.deepEqual(JSON.parse(calls[1].body),{name:record.name,entrance_color:'#123abc'})
+  assert.equal(calls[1].url.searchParams.get('updated_at'),`eq.${record.updated_at}`)
+  assert.ok(calls[1].url.searchParams.get('select')?.split(',').includes('entrance_color'))
+  await createRoomRepository(client).rename(record, record.name, undefined, '#FE1234')
+  assert.deepEqual(JSON.parse(calls[2].body),{name:record.name,sign_text_color:'#fe1234'})
+  assert.equal(calls[2].url.searchParams.get('updated_at'),`eq.${record.updated_at}`)
+  assert.ok(calls[2].url.searchParams.get('select')?.split(',').includes('sign_text_color'))
 })
 
 test('room rename reports a conflict instead of overwriting a newer name',async()=>{

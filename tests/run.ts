@@ -12,6 +12,7 @@ import './guestbook-management.test.ts';
 import './room-expansion.test.ts';
 import './room-opening.test.ts';
 import './youtube-artworks.test.ts';
+import './gallery-music.test.ts';
 
 import './account-permissions.test.ts';
 

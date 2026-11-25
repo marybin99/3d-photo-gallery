@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { turnTowards, updateCharacterMotion } from '../src/locomotion.ts'
-import { movementDelta } from '../src/controls.ts'
+import { turnTowards, updateCharacterMotion } from '../src/features/gallery/locomotion.ts'
+import { movementDelta } from '../src/features/gallery/controls.ts'
 
 test('character faces forward into all eight camera-relative movement directions', () => {
   for(const cameraYaw of [0,.7,-2]){

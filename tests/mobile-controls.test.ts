@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { createJoystick, joystickInput, movementDelta } from '../src/controls.ts'
+import { createJoystick, joystickInput, movementDelta } from '../src/features/gallery/controls.ts'
 
 test('joystick center and small finger jitter stay inside a dead zone',()=>{
   for(const [x,y] of [[0,0],[2,1],[-3,-2]]){

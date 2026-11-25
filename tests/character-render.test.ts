@@ -9,7 +9,7 @@ import { build } from 'esbuild'
 import { act, createElement } from 'react'
 import { createRoot, extend } from '@react-three/fiber'
 import * as THREE from 'three'
-import { updateCharacterMotion } from '../src/locomotion.ts'
+import { updateCharacterMotion } from '../src/features/gallery/locomotion.ts'
 
 // Real React Three Fiber scene graph and frame subscriptions; no GPU required.
 // The stub replaces only WebGL drawing, not Three objects or React rendering.
@@ -18,7 +18,7 @@ test('rendered character turns its entire model left, right and backwards across
   const require=createRequire(import.meta.url)
   const output=join(directory,'Character.mjs')
   const built=await build({
-    entryPoints:['src/Character.tsx'],bundle:true,platform:'node',format:'esm',jsx:'automatic',write:false,
+    entryPoints:['src/features/gallery/components/Character.tsx'],bundle:true,platform:'node',format:'esm',jsx:'automatic',write:false,
     plugins:[{name:'shared-test-dependencies',setup(builder){
       builder.onResolve({filter:/^[^./]/},args=>({path:require.resolve(args.path),external:true}))
     }}],

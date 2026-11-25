@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { createClient } from '@supabase/supabase-js'
-import { youtubeVideoId, normalizeYoutubeUrl } from '../src/youtubeModel.ts'
-import { fillArtworkSlots, recordToArtwork } from '../src/artworkModel.ts'
-import { artworks } from '../src/data.ts'
-import { createArtworkRepository } from '../src/artworkRepository.ts'
+import { youtubeVideoId, normalizeYoutubeUrl } from '../src/features/youtube/youtubeModel.ts'
+import { fillArtworkSlots, recordToArtwork } from '../src/features/artworks/artworkModel.ts'
+import { artworks } from '../src/features/artworks/artworkSlots.ts'
+import { createArtworkRepository } from '../src/features/artworks/artworkRepository.ts'
 
 const videoId='M7lc1UVf-VE'
 const url=`https://www.youtube.com/watch?v=${videoId}`

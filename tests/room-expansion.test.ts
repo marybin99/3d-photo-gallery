@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { createClient } from '@supabase/supabase-js'
-import { artworkSlots, artworks } from '../src/data.ts'
-import { areaAt, canStand, createGalleryLayout, moveAndSlide, reconcileGalleryPose, SPAWN } from '../src/layout.ts'
-import { allRoomIds, namesFromRecords, roomName } from '../src/roomModel.ts'
-import { fillArtworkSlots, firstAvailableSlot, recordToArtwork, slotLabel, validateDraft } from '../src/artworkModel.ts'
-import { minimapGeometry } from '../src/minimapModel.ts'
-import { createRoomRepository } from '../src/roomRepository.ts'
+import { artworkSlots, artworks } from '../src/features/artworks/artworkSlots.ts'
+import { areaAt, canStand, createGalleryLayout, moveAndSlide, reconcileGalleryPose, SPAWN } from '../src/features/gallery/layout.ts'
+import { allRoomIds, namesFromRecords, roomName } from '../src/features/rooms/roomModel.ts'
+import { fillArtworkSlots, firstAvailableSlot, recordToArtwork, slotLabel, validateDraft } from '../src/features/artworks/artworkModel.ts'
+import { minimapGeometry } from '../src/features/gallery/minimapModel.ts'
+import { createRoomRepository } from '../src/features/rooms/roomRepository.ts'
 
 const ids=['A','B','C','D','E','Z']
 test('additional rooms preserve existing frames and have twelve distinct supported frames each',()=>{

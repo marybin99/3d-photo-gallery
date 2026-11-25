@@ -239,7 +239,7 @@ supabase functions deploy admin-create-account
 supabase secrets set ADMIN_ALLOWED_ORIGINS=https://실제전시관주소
 ```
 
-로컬 테스트 주소도 필요하면 쉼표로 추가합니다(예: `http://localhost:5173`).
+로컬 테스트 주소도 필요하면 쉼표로 추가합니다(예: `http://localhost:5174`).
 허용 주소는 경로와 끝 슬래시 없는 origin입니다.
 함수는 서버 환경의 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`를 사용합니다.
 서비스 키를 `VITE_*` 환경변수나 브라우저에 추가하지 않습니다.

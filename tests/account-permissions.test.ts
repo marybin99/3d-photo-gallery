@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { canUseRoom, parseAccess } from '../src/adminAccess.ts';
+import { canUseRoom, parseAccess } from '../src/features/admin/adminAccess.ts';
 import { createAccountHandler } from '../supabase/functions/admin-create-account/handler.ts';
 import {
   accountLabel,

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { act, createElement } from 'react';
 import { createRoot } from '@react-three/fiber';
-import { useAdminSession } from '../src/useAdminSession.ts';
+import { useAdminSession } from '../src/features/admin/useAdminSession.ts';
 
 test('admin hook waits for server permission, denies normal users and ignores a late grant after logout', async () => {
   let callback: ((event: string, session: unknown) => void) | undefined;

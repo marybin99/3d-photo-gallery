@@ -3,7 +3,7 @@ import test from 'node:test'
 import { createClient } from '@supabase/supabase-js'
 import { createGuestbookHandler, type GuestbookWriter } from '../supabase/functions/guestbook-submit/handler.ts'
 import { validateGuestbookText } from '../supabase/functions/_shared/guestbook.ts'
-import { createGuestbookRepository } from '../src/guestbookRepository.ts'
+import { createGuestbookRepository } from '../src/features/guestbook/guestbookRepository.ts'
 
 const origin='https://gallery.example.test'
 const clientId='11111111-1111-4111-8111-111111111111'

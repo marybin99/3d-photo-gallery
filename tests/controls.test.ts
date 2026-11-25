@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { bindMouseLook, DEFAULT_PITCH, mouseLook, movementDelta } from '../src/controls.ts'
+import { bindMouseLook, DEFAULT_PITCH, mouseLook, movementDelta } from '../src/features/gallery/controls.ts'
 
 test('A/D strafe relative to the view and forward stays perpendicular', () => {
   for (const yaw of [0, Math.PI/2, Math.PI, -.7]) {

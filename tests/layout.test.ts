@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { areaAt, areas, BOOK, canStand, createGalleryLayout, lobbyTree, moveAndSlide, SPAWN, walls } from '../src/layout.ts'
-import { artworks } from '../src/data.ts'
+import { areaAt, areas, BOOK, canStand, createGalleryLayout, lobbyTree, moveAndSlide, SPAWN, walls } from '../src/features/gallery/layout.ts'
+import { artworks } from '../src/features/artworks/artworkSlots.ts'
 
 function walkPath(points: [number, number][]) {
   for (let i = 1; i < points.length; i++) {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createClient } from '@supabase/supabase-js';
-import { audioFileFormat, createMusicRepository } from '../src/galleryMusic.ts';
+import { audioFileFormat, createMusicRepository } from '../src/features/music/musicRepository.ts';
 
 const userId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const oldPath = `${userId}/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb.mp3`;

@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { createClient } from '@supabase/supabase-js'
-import { defaultRoomNames, mapNameLines, namesFromRecords, roomName, validateRoomName } from '../src/roomModel.ts'
-import { fillArtworkSlots, slotLabel } from '../src/artworkModel.ts'
-import { artworks } from '../src/data.ts'
-import { createRoomRepository } from '../src/roomRepository.ts'
+import { defaultRoomNames, mapNameLines, namesFromRecords, roomName, validateRoomName } from '../src/features/rooms/roomModel.ts'
+import { fillArtworkSlots, slotLabel } from '../src/features/artworks/artworkModel.ts'
+import { artworks } from '../src/features/artworks/artworkSlots.ts'
+import { createRoomRepository } from '../src/features/rooms/roomRepository.ts'
 
 test('room names trim spaces, reject empty or oversized names and retain stable room codes',()=>{
   assert.equal(validateRoomName('  계절의 기억  '),'계절의 기억')

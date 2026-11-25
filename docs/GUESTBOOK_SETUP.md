@@ -29,7 +29,7 @@ Supabase의 **Edge Functions → Secrets**에 다음 값을 추가합니다.
 | --- | --- |
 | `GUESTBOOK_ALLOWED_ORIGINS` | `https://내전시관.vercel.app,http://localhost:5174` |
 
-예시를 실제 배포 주소로 바꿉니다. 권장 형식은 `https://도메인`이며 여러 주소는 쉼표 또는 줄바꿈으로 구분합니다. 함수는 설정값의 마지막 `/`와 따옴표·경로를 정리해 Origin 단위로 비교합니다. 이 보완은 최신 함수 코드를 재배포해야 반영됩니다. 개발 서버가 5173 등 다른 포트이면 그 주소도 정확히 추가합니다. Vercel의 임시 Preview 주소는 사용할 때 별도로 추가해야 합니다.
+예시를 실제 배포 주소로 바꿉니다. 권장 형식은 `https://도메인`이며 여러 주소는 쉼표 또는 줄바꿈으로 구분합니다. 함수는 설정값의 마지막 `/`와 따옴표·경로를 정리해 Origin 단위로 비교합니다. 이 보완은 최신 함수 코드를 재배포해야 반영됩니다. 개발 서버가 5174 등 다른 포트이면 그 주소도 정확히 추가합니다. Vercel의 임시 Preview 주소는 사용할 때 별도로 추가해야 합니다.
 
 Supabase 호스팅 환경의 `SUPABASE_URL`과 `SUPABASE_SERVICE_ROLE_KEY`를 서버에서 사용합니다. 기본 service_role key를 사용하지 않는 프로젝트는 **Edge Function Secrets**에 `GUESTBOOK_SECRET_KEY`라는 이름으로 프로젝트의 서버용 secret key를 설정할 수 있습니다. 서버 키는 `VITE_*` 환경변수나 프런트엔드 코드에 넣지 않습니다.
 

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createClient } from '@supabase/supabase-js';
-import { createAdminGuestbookRepository } from '../src/adminGuestbookRepository.ts';
+import { createAdminGuestbookRepository } from '../src/features/guestbook/adminGuestbookRepository.ts';
 
 const entry = {
   id: '11111111-1111-4111-8111-111111111111',

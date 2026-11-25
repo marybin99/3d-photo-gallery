@@ -108,7 +108,7 @@ export default function AdminGuestbook({ client }: { client: SupabaseClient }) {
         </button>
       </div>
       <div className="admin-card">
-        <label className="admin-filter">
+        <label className="admin-filter tw:mb-5">
           공개 상태
           <select
             value={filter}
@@ -149,10 +149,16 @@ export default function AdminGuestbook({ client }: { client: SupabaseClient }) {
                 : '아직 등록된 방명록이 없습니다.'}
           </p>
         ) : null}
-        <div className="admin-guestbook-list" aria-busy={loading || busy}>
+        <div
+          className="admin-guestbook-list tw:mt-5 tw:grid"
+          aria-busy={loading || busy}
+        >
           {entries.map((entry) => (
-            <article className="admin-guestbook-entry" key={entry.id}>
-              <div className="admin-guestbook-meta">
+            <article
+              className="tw:min-w-0 tw:border-t tw:border-t-admin-divider tw:py-5.5"
+              key={entry.id}
+            >
+              <div className="admin-guestbook-meta tw:flex tw:flex-wrap tw:items-center tw:gap-2.5 tw:text-[13px]">
                 <strong>{entry.nickname}</strong>
                 <span
                   className={`admin-guestbook-badge${entry.is_visible ? '' : ' is-hidden'}`}
@@ -163,7 +169,9 @@ export default function AdminGuestbook({ client }: { client: SupabaseClient }) {
                   {dateFormat.format(new Date(entry.created_at))}
                 </time>
               </div>
-              <p className="admin-guestbook-message">{entry.message}</p>
+              <p className="tw:mx-0 tw:my-4 tw:leading-[1.9] tw:wrap-anywhere tw:whitespace-pre-wrap tw:text-[14px]">
+                {entry.message}
+              </p>
               <div className="admin-actions">
                 <button
                   disabled={busy || loading}
@@ -194,7 +202,7 @@ export default function AdminGuestbook({ client }: { client: SupabaseClient }) {
             </article>
           ))}
         </div>
-        <div className="admin-guestbook-pagination">
+        <div className="admin-guestbook-pagination tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-3 tw:border-t tw:border-t-admin-divider tw:pt-4.5 tw:text-[12px]">
           <span>
             {count}개 · {page + 1} /{' '}
             {Math.max(1, Math.ceil(count / GUESTBOOK_PAGE_SIZE))} 페이지

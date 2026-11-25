@@ -15,7 +15,7 @@ import '../features/admin/admin.css';
 export default function AdminPage() {
   return (
     <main className="admin-page">
-      <header className="admin-header">
+      <header className="admin-header tw:mx-auto tw:flex tw:max-w-295 tw:items-center tw:justify-between tw:border-b tw:border-b-[#d3c6b6] tw:py-6 tw:admin-short:py-3.5">
         <a href="/">← 전시관으로</a>
         <span>EXHIBITION STUDIO</span>
       </header>
@@ -131,7 +131,7 @@ function AdminSession({ client }: { client: SupabaseClient }) {
     );
   return (
     <>
-      <div className="admin-account">
+      <div className="tw:mx-auto tw:my-4.5 tw:flex tw:max-w-295 tw:items-center tw:justify-end tw:gap-3.5 tw:text-[12px]">
         <span>
           {accountLabel(auth.session.user.email)} ·{' '}
           {auth.permissions && roleLabels[auth.permissions.role]}
@@ -192,7 +192,10 @@ function AdminDashboard({
   }, [access.role, canManageMusic]);
   return (
     <>
-      <nav className="admin-navigation" aria-label="관리 메뉴">
+      <nav
+        className="admin-navigation tw:mx-auto tw:my-5.5 tw:flex tw:max-w-295 tw:gap-2.5"
+        aria-label="관리 메뉴"
+      >
         <a
           className="admin-button"
           href="#/admin/artworks"

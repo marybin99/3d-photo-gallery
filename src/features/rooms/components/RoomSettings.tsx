@@ -108,7 +108,7 @@ export default function RoomSettings({
   }
   return (
     <section
-      className="admin-card admin-room-settings"
+      className="admin-card admin-room-settings tw:mt-6 tw:mb-2.5"
       aria-label="전시실 관리"
     >
       <h2>전시실 관리</h2>
@@ -178,7 +178,10 @@ export default function RoomSettings({
       )}
       <div className="admin-room-forms">
         {rooms.records.map((record) => (
-          <div className="admin-room-item" key={record.id}>
+            <div
+              className="admin-room-item tw:min-w-0 tw:rounded-lg tw:border tw:border-solid tw:border-[#e2d6c8] tw:bg-[#fcf9f3] tw:p-4 tw:[@media(max-width:420px)]:p-3"
+              key={record.id}
+            >
             <RoomAppearanceForm
               record={record}
               disabled={saving || rooms.loading}
@@ -338,7 +341,7 @@ function RoomColorFields({
   disabled: boolean;
 }) {
   return (
-    <div className="admin-room-colors">
+    <div className="admin-room-colors tw:flex tw:items-end tw:gap-2">
       <label>
         입구 색상
         <input

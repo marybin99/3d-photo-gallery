@@ -450,7 +450,7 @@ main,
 }
 
 /* Right thumbstick, with the rest of the canvas available for looking around. */
-.gallery-view canvas {
+.gallery-canvas {
   touch-action: none;
 }
 .mobile-controls .joystick-base {
@@ -623,7 +623,8 @@ main,
   .book-interact {
     left: max(12px, env(safe-area-inset-left, 0px));
     right: auto;
-    bottom: calc(50px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+    transform: none;
     width: 148px;
     padding: 10px 12px;
   }
@@ -1093,6 +1094,52 @@ main,
   border: 0;
 }
 
+@media (max-width: 680px) {
+  .bottom-left {
+    left: max(12px, env(safe-area-inset-left, 0px));
+    right: max(12px, env(safe-area-inset-right, 0px));
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 6px;
+    max-width: 420px;
+  }
+  .bottom-left > button,
+  .guide-anchor > button,
+  .room-navigation {
+    min-height: 44px;
+  }
+  .bottom-left > button,
+  .guide-anchor > button {
+    white-space: nowrap;
+  }
+  .room-navigation {
+    min-width: 0;
+    padding: 0 7px;
+    font-size: 11px;
+  }
+  .room-navigation-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .room-navigation select {
+    width: 100%;
+    max-width: none;
+    min-height: 42px;
+    text-overflow: ellipsis;
+  }
+  .mobile-controls {
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  }
+  .book-interact {
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+    margin: 0;
+  }
+}
+
 .map-controls {
   position: absolute;
   top: 22px;
@@ -1114,9 +1161,20 @@ main,
   overscroll-behavior: contain;
   scrollbar-width: thin;
 }
-.map-controls .map-toggle {
+.map-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.map-actions .map-toggle {
   position: static;
-  align-self: flex-end;
+  white-space: nowrap;
+}
+.map-actions .snow-toggle[aria-pressed='true'] {
+  background: #e2eee9;
+  border-color: #82978c;
+  color: #254e41;
 }
 @media (max-width: 700px) {
   .map-controls { top: 12px; right: 10px; width: 148px; }
@@ -1125,6 +1183,17 @@ main,
 @media (orientation: landscape) and (max-height: 500px) {
   .map-controls { top: 8px; right: max(12px, env(safe-area-inset-right, 0px)); width: 130px; }
   .minimap-viewport { max-height: 35dvh; }
+  .map-actions {
+    align-self: flex-end;
+    width: max-content;
+    flex-wrap: nowrap;
+  }
+}
+@media (max-width: 700px), (orientation: landscape) and (max-height: 500px) {
+  .map-actions .map-toggle {
+    padding-inline: 6px;
+    font-size: 11px;
+  }
 }
 
 @media (max-width: 760px) and (orientation: portrait) {

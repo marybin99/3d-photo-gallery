@@ -44,7 +44,12 @@ test('mouse drag suppresses object clicks, releases capture and leaves normal cl
   const canvas=new Canvas()
   const moves:number[][]=[]
   const unbind=bindMouseLook(canvas as unknown as HTMLCanvasElement,(dx,dy)=>moves.push([dx,dy]))
-  const pointer=(type:string,x:number,y:number,extras={})=>canvas.dispatchEvent(Object.assign(new Event(type),{pointerType:'mouse',pointerId:1,button:0,buttons:1,clientX:x,clientY:y,...extras}))
+  const pointer=(type:string,x:number,y:number,extras={})=>{
+    const target=type==='pointerup'||type==='pointercancel' ? globalThis.window : canvas
+    target.dispatchEvent(Object.assign(new Event(type),{pointerType:'mouse',pointerId:1,button:0,buttons:1,clientX:x,clientY:y,...extras}))
+  }
+  let sceneMoves=0
+  canvas.addEventListener('pointermove',()=>sceneMoves++)
   const click=()=>{
     const event=Object.assign(new Event('click',{cancelable:true}),{detail:1})
     canvas.dispatchEvent(event)
@@ -52,13 +57,17 @@ test('mouse drag suppresses object clicks, releases capture and leaves normal cl
   }
   try {
     pointer('pointerdown',0,0)
+    assert.equal(canvas.captured,null)
     pointer('pointermove',2,1)
     assert.deepEqual(moves,[])
+    assert.equal(sceneMoves,1)
     pointer('pointerup',2,1)
     assert.equal(click(),false)
     pointer('pointerdown',0,0)
     pointer('pointermove',10,8)
     assert.deepEqual(moves,[[10,8]])
+    assert.equal(canvas.captured,1)
+    assert.equal(sceneMoves,1)
     pointer('pointerup',10,8)
     assert.equal(canvas.captured,null)
     assert.equal(click(),true)
@@ -68,7 +77,8 @@ test('mouse drag suppresses object clicks, releases capture and leaves normal cl
     pointer('pointerdown',0,0,{pointerType:'touch'})
     pointer('pointermove',20,20,{pointerType:'touch'})
     assert.deepEqual(moves[1],[20,20])
-    pointer('pointerup',20,20,{pointerType:'touch'})
+    pointer('pointercancel',20,20,{pointerType:'touch'})
+    assert.equal(canvas.captured,null)
     assert.equal(click(),true)
     pointer('pointerdown',0,0)
     globalThis.window.dispatchEvent(new Event('blur'))

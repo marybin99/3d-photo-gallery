@@ -28,6 +28,7 @@ export const walls: Barrier[] = [
   { x: 5, z: -6, width: 6, depth: .3 },
 ]
 export const desk: Barrier = { x: BOOK.x, z: BOOK.z, width: 2.4, depth: 1.4, height: 1.18 }
+export const lobbyTree: Barrier = { x: 3.75, z: -4, width: 2.5, depth: 2.5, height: 4.15 }
 export const doorways = [
   { x: -8, z: 1, rotation: Math.PI/2, label: 'A · GALLERY', zone: 'A' },
   { x: 0, z: -6, rotation: 0, label: 'B · GALLERY', zone: 'B' },
@@ -43,7 +44,7 @@ function doorwayPosts(doors: Doorway[]): Barrier[] {
     height: 4,
   })))
 }
-export const obstacles: Barrier[] = [...walls, ...doorwayPosts(doorways), desk]
+export const obstacles: Barrier[] = [...walls, ...doorwayPosts(doorways), desk, lobbyTree]
 export type GalleryLayout = { areas: Area[]; walls: Barrier[]; obstacles: Barrier[]; doorways: Doorway[]; closedRoomIds: string[] }
 // Pack rooms along a central corridor. Stable room/slot IDs survive deletion and repacking.
 export function additionalRoomAreas(ids: string[]): Area[] {
@@ -92,7 +93,7 @@ export function createGalleryLayout(ids: string[], closedIds: string[]=[]): Gall
       rotation:area.x<0?Math.PI/2:-Math.PI/2,zone:area.id,returnZone:'CORRIDOR'})),
   ]
   return withRoomAccess({areas:[...areas,corridor,...extraAreas],walls:uniqueWalls,
-    obstacles:[...uniqueWalls,...doorwayPosts(nextDoors),desk],doorways:nextDoors,closedRoomIds:[]},closedIds)
+    obstacles:[...uniqueWalls,...doorwayPosts(nextDoors),desk,lobbyTree],doorways:nextDoors,closedRoomIds:[]},closedIds)
 }
 export const defaultLayout: GalleryLayout = {areas,walls,obstacles,doorways,closedRoomIds:[]}
 export const PLAYER_RADIUS = .35

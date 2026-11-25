@@ -70,27 +70,35 @@ export function bindMouseLook(canvas: HTMLElement, onLook: (dx: number, dy: numb
     startX = lastX = event.clientX
     startY = lastY = event.clientY
     dragged = false
-    canvas.setPointerCapture(pointer)
   }
   const move = (event: PointerEvent) => {
     if (event.pointerId !== pointer) return
     if (!touch && !(event.buttons & 1)) { stop(); return }
-    if (!dragged && Math.hypot(event.clientX-startX, event.clientY-startY) < 5) return
-    dragged = true
+    if (!dragged) {
+      if (Math.hypot(event.clientX-startX, event.clientY-startY) < 5) return
+      dragged = true
+      canvas.setPointerCapture(event.pointerId)
+    }
+    // Only taps and hover need to reach the scene's raycaster.
+    event.stopImmediatePropagation()
     onLook(event.clientX-lastX, event.clientY-lastY)
     lastX = event.clientX
     lastY = event.clientY
   }
   const up = (event: PointerEvent) => { if (event.pointerId === pointer) stop() }
+  const lost = (event: PointerEvent) => {
+    // Touch can transfer implicit capture from the canvas element to its wrapper.
+    if (event.target === canvas) up(event)
+  }
   const click = (event: MouseEvent) => {
     // A drag ending over an artwork or the book must not open its dialog.
     if (dragged && event.detail !== 0) { event.preventDefault(); event.stopImmediatePropagation() }
   }
   canvas.addEventListener('pointerdown', down, true)
   canvas.addEventListener('pointermove', move, true)
-  canvas.addEventListener('pointerup', up, true)
-  canvas.addEventListener('pointercancel', up, true)
-  canvas.addEventListener('lostpointercapture', up, true)
+  window.addEventListener('pointerup', up, true)
+  window.addEventListener('pointercancel', up, true)
+  canvas.addEventListener('lostpointercapture', lost, true)
   canvas.addEventListener('click', click, true)
   window.addEventListener('blur', stop)
   document.addEventListener('visibilitychange', stop)
@@ -98,9 +106,9 @@ export function bindMouseLook(canvas: HTMLElement, onLook: (dx: number, dy: numb
     stop()
     canvas.removeEventListener('pointerdown', down, true)
     canvas.removeEventListener('pointermove', move, true)
-    canvas.removeEventListener('pointerup', up, true)
-    canvas.removeEventListener('pointercancel', up, true)
-    canvas.removeEventListener('lostpointercapture', up, true)
+    window.removeEventListener('pointerup', up, true)
+    window.removeEventListener('pointercancel', up, true)
+    canvas.removeEventListener('lostpointercapture', lost, true)
     canvas.removeEventListener('click', click, true)
     window.removeEventListener('blur', stop)
     document.removeEventListener('visibilitychange', stop)

@@ -1,11 +1,13 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { Html, Text } from '@react-three/drei';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { type Artwork } from './data';
 import ArtworkImage from './ArtworkImage';
 import YouTubePlayer from './YouTubePlayer';
 import ClosedRoomCurtain from './ClosedRoomCurtain';
+import LobbyChristmas from './LobbyChristmas';
+import LobbySnow from './LobbySnow';
 import { fillArtworkSlots } from './artworkModel';
 import { roomName, type RoomNames } from './roomModel';
 import { DEFAULT_ENTRANCE_COLOR, DEFAULT_FRAME_COLOR } from './galleryColors';
@@ -14,6 +16,7 @@ import {
   moveAndSlide,
   SPAWN,
   BOOK,
+  areaAt,
   desk,
 } from './layout';
 import Character from './Character';
@@ -24,7 +27,7 @@ import {
   mouseLook,
   movementDelta,
 } from './controls';
-import { followCameraPosition, CAMERA_LOOK_HEIGHT } from './camera';
+import { followCameraPosition, CAMERA_LOOK_HEIGHT, GALLERY_FOV, lobbyFieldOfView } from './camera';
 export { SPAWN } from './layout';
 
 export type Pose = { x: number; z: number; yaw: number };
@@ -92,7 +95,7 @@ function Wall({
     </mesh>
   );
 }
-function ImageFrame({
+const ImageFrame = memo(function ImageFrame({
   art,
   onSelect,
   playing,
@@ -156,7 +159,7 @@ function ImageFrame({
       )}
     </group>
   );
-}
+});
 function Player({
   pose,
   onPose,
@@ -179,11 +182,13 @@ function Player({
   const velocity = useRef({ x: 0, z: 0 });
   const lastPose = useRef(pose.current);
   const cameraReady = useRef(false);
-  const { camera, gl, events } = useThree();
+  const { camera, gl, events, size } = useThree();
+  const lobbyFov = lobbyFieldOfView(size.width / Math.max(1, size.height));
   const lookSurface = events.connected instanceof HTMLElement
     ? events.connected
     : gl.domElement.parentElement ?? gl.domElement;
   const pitch = useRef(DEFAULT_PITCH);
+  const orbit = useRef({ yaw: pose.current.yaw, pitch: DEFAULT_PITCH, distance: 0 });
   useEffect(() => {
     if (paused) return;
     // HTML video depth blending disables pointer events on the canvas itself.
@@ -195,6 +200,7 @@ function Player({
     });
   }, [lookSurface, paused, pose]);
   const broadcast = useRef(0);
+  const lastPublishedPose = useRef({ ...pose.current });
   const keys = useKeyboard(!paused);
   const target = useMemo(() => new THREE.Vector3(), []);
   const lookAt = useMemo(() => new THREE.Vector3(), []);
@@ -223,6 +229,14 @@ function Player({
     const p = pose.current;
     if (!p) return;
     const d = Math.min(delta, 0.06);
+    if (camera instanceof THREE.PerspectiveCamera) {
+      const targetFov = lobbyFov > GALLERY_FOV && areaAt(p.x, p.z, layout).id === 'LOBBY'
+        ? lobbyFov : GALLERY_FOV;
+      if (Math.abs(camera.fov - targetFov) > 0.05) {
+        camera.fov = THREE.MathUtils.damp(camera.fov, targetFov, 8, d);
+        camera.updateProjectionMatrix();
+      }
+    }
     const keyState = keys.current;
     const forward = paused
       ? 0
@@ -259,27 +273,28 @@ function Player({
       : THREE.MathUtils.damp(velocity.current.z, desired.z, damping, d);
     if (Math.hypot(velocity.current.x, velocity.current.z) < 0.015)
       velocity.current = { x: 0, z: 0 };
-    const next = moveAndSlide(
+    const next = velocity.current.x || velocity.current.z ? moveAndSlide(
       p.x,
       p.z,
       velocity.current.x * d,
       velocity.current.z * d,
       undefined,
       layout,
-    );
+    ) : p;
     updateCharacterMotion(motion.current, next.x - p.x, next.z - p.z, d);
     p.x = next.x;
     p.z = next.z;
     if (body.current) body.current.position.set(p.x, 0, p.z);
-    target.set(...followCameraPosition(p, pitch.current));
-    if (resetCamera) camera.position.copy(target);
-    else camera.position.lerp(target, 1 - Math.exp(-14 * d));
+    const view = orbit.current;
+    view.yaw = resetCamera ? p.yaw : THREE.MathUtils.damp(view.yaw, p.yaw, 22, d);
+    view.pitch = resetCamera ? pitch.current : THREE.MathUtils.damp(view.pitch, pitch.current, 22, d);
+    target.set(...followCameraPosition({ x: p.x, z: p.z, yaw: view.yaw }, view.pitch));
     cameraReady.current = true;
-    // Keep the follow camera on the player's side of room walls.
+    // Collision shortens the radius without pulling the next frame's orbit off course.
     lookAt.set(p.x, CAMERA_LOOK_HEIGHT, p.z);
     ray.origin.copy(lookAt);
-    ray.direction.copy(camera.position).sub(lookAt).normalize();
-    let distance = camera.position.distanceTo(lookAt);
+    ray.direction.copy(target).sub(lookAt).normalize();
+    let distance = target.distanceTo(lookAt);
     for (const box of cameraWalls) {
       if (ray.intersectBox(box, hit))
         distance = Math.min(
@@ -287,12 +302,17 @@ function Player({
           Math.max(0.15, lookAt.distanceTo(hit) - 0.15),
         );
     }
-    camera.position.copy(lookAt).addScaledVector(ray.direction, distance);
+    view.distance = resetCamera ? distance : Math.min(distance, THREE.MathUtils.damp(view.distance, distance, 14, d));
+    camera.position.copy(lookAt).addScaledVector(ray.direction, view.distance);
     camera.lookAt(lookAt);
     broadcast.current += d;
     if (broadcast.current > 0.07) {
       broadcast.current = 0;
-      onPose({ ...p });
+      const last = lastPublishedPose.current;
+      if (p.x !== last.x || p.z !== last.z || p.yaw !== last.yaw) {
+        lastPublishedPose.current = { ...p };
+        onPose(lastPublishedPose.current);
+      }
     }
   });
   return (
@@ -427,6 +447,8 @@ export default function Gallery({
   artworks,
   roomNames,
   entranceColors,
+  snowEnabled,
+  mobileRendering,
   slots,
   onSelect,
   onGuestbook,
@@ -440,6 +462,8 @@ export default function Gallery({
   artworks: Artwork[];
   roomNames: RoomNames;
   entranceColors: Record<string, string | undefined>;
+  snowEnabled: boolean;
+  mobileRendering: boolean;
   slots: Artwork[];
   onSelect: (a: Artwork) => void;
   onGuestbook: () => void;
@@ -457,16 +481,23 @@ export default function Gallery({
     .sort((a,b)=>Math.hypot(a.x-focusX,a.z-focusZ)-Math.hypot(b.x-focusX,b.z-focusZ))
     .slice(0,4).map(area=>area.id)),[layout,focusX,focusZ]);
   const visibleDoors=layout.doorways.filter(door=>Math.hypot(door.x-focusX,door.z-focusZ)<32);
+  const nearLobby = Math.hypot(focusX, focusZ - 2) < 32;
+  const visibleArtworks = useMemo(
+    () => fillArtworkSlots(artworks, slots).filter(art => nearbyAreas.has(art.zone)),
+    [artworks, slots, nearbyAreas],
+  );
+  const shadowSize = mobileRendering ? 1024 : 2048;
   return (
     <>
       <color attach="background" args={['#e6dfd4']} />
       <ambientLight intensity={1.15} />
       <hemisphereLight args={['#fff6e9', '#a8a39b', 2.2]} />
       <directionalLight
+        key={shadowSize}
         position={[3, 18, 6]}
         intensity={2.0}
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[shadowSize, shadowSize]}
         shadow-camera-left={-28}
         shadow-camera-right={28}
         shadow-camera-top={28}
@@ -509,7 +540,7 @@ export default function Gallery({
           color={entranceColors[door.zone]}
         />
       ))}
-      {fillArtworkSlots(artworks, slots).filter(art=>nearbyAreas.has(art.zone)).map((art) => (
+      {visibleArtworks.map((art) => (
         <ImageFrame key={art.id} art={art} onSelect={onSelect} playing={!videoPaused} />
       ))}
       <Text
@@ -529,6 +560,8 @@ export default function Gallery({
         LOBBY
       </Text>
       <GuestbookDesk onOpen={onGuestbook} />
+      {nearLobby && <LobbyChristmas />}
+      {nearLobby && snowEnabled && <LobbySnow />}
       <Player
         pose={pose}
         onPose={onPose}

@@ -1,8 +1,8 @@
-import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Canvas } from '@react-three/fiber';
 import Gallery, { SPAWN, type Pose } from './Gallery';
-import { followCameraPosition } from './camera';
+import { followCameraPosition, GALLERY_FOV } from './camera';
 import { artworkSlots, type Artwork } from './data';
 import { areaAt, BOOK, createGalleryLayout, reconcileGalleryPose } from './layout';
 import { supabase } from './supabase';
@@ -16,6 +16,18 @@ import MiniMap from './MiniMap';
 import YouTubePlayer from './YouTubePlayer';
 import './styles.css';
 const AdminPage = lazy(() => import('./AdminPage'));
+const SNOW_PREFERENCE = 'gallery-lobby-snow';
+const MOBILE_RENDERING = '(max-width: 680px), (any-pointer: coarse)';
+
+function initialSnowEnabled() {
+  try {
+    const saved = localStorage.getItem(SNOW_PREFERENCE);
+    if (saved === 'on' || saved === 'off') return saved === 'on';
+  } catch {
+    // The toggle still works when browser storage is unavailable.
+  }
+  return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
 
 function App() {
   const [admin, setAdmin] = useState(() =>
@@ -54,6 +66,9 @@ function GalleryApp() {
   const mobileInput = useRef({ forward: 0, right: 0 });
   const [selected, setSelected] = useState<Artwork | null>(null);
   const [guestbook, setGuestbook] = useState(false);
+  const selectArtwork = useCallback((art: Artwork) => {
+    if (openKey.split(',').includes(art.zone)) setSelected(art);
+  }, [openKey]);
   useEffect(()=>{setSelected(art=>art&&openSlots.some(slot=>slot.id===art.id)?art:null)},[openSlots]);
   const [guideMode, setGuideMode] = useState<'welcome' | 'compact' | null>(
     'welcome',
@@ -64,6 +79,24 @@ function GalleryApp() {
     galleryView.current?.focus({ preventScroll: true });
   };
   const [minimap, setMinimap] = useState(true);
+  const [mobileRendering, setMobileRendering] = useState(() => window.matchMedia(MOBILE_RENDERING).matches);
+  useEffect(() => {
+    const media = window.matchMedia(MOBILE_RENDERING);
+    const update = () => setMobileRendering(media.matches);
+    media.addEventListener('change', update);
+    update();
+    return () => media.removeEventListener('change', update);
+  }, []);
+  const [snowEnabled, setSnowEnabled] = useState(initialSnowEnabled);
+  const toggleSnow = () => {
+    const next = !snowEnabled;
+    setSnowEnabled(next);
+    try {
+      localStorage.setItem(SNOW_PREFERENCE, next ? 'on' : 'off');
+    } catch {
+      // Keep the current view usable without storage.
+    }
+  };
   const paused = selected !== null || guestbook || guideMode === 'welcome';
   const currentArea = areaAt(pose.x, pose.z, layout);
   const nearBook = Math.hypot(pose.x - BOOK.x, pose.z - BOOK.z) < 3.2;
@@ -114,20 +147,23 @@ function GalleryApp() {
     <main>
       <div className="gallery-view" data-expanded-wing={rooms.ids.length>3} ref={galleryView} tabIndex={-1}>
         <Canvas
+          className="gallery-canvas"
           shadows
           gl={{ alpha: true }}
           style={{ isolation: 'isolate' }}
-          dpr={[1, 1.7]}
-          camera={{ position: followCameraPosition(SPAWN), fov: 64 }}
+          dpr={[1, mobileRendering ? 1.25 : 1.7]}
+          camera={{ position: followCameraPosition(SPAWN), fov: GALLERY_FOV }}
         >
           <Suspense fallback={null}>
             <Gallery
               artworks={catalog.items}
               roomNames={rooms.names}
               entranceColors={rooms.entranceColors}
+              snowEnabled={snowEnabled}
+              mobileRendering={mobileRendering}
               slots={slots}
               layout={layout}
-              onSelect={art=>{if(rooms.openIds.includes(art.zone))setSelected(art)}}
+              onSelect={selectArtwork}
               onGuestbook={() => setGuestbook(true)}
               pose={poseRef}
               onPose={setPose}
@@ -169,9 +205,14 @@ function GalleryApp() {
         )}
         <div className="map-controls">
           {minimap && <MiniMap pose={pose} names={rooms.names} layout={layout} />}
-          <button className="map-toggle" onClick={() => setMinimap((v) => !v)}>
-            {minimap ? '지도 숨기기' : '미니맵 보기'}
-          </button>
+          <div className="map-actions">
+            <button className="map-toggle" onClick={() => setMinimap((v) => !v)}>
+              {minimap ? '지도 숨기기' : '미니맵 보기'}
+            </button>
+            <button type="button" className="map-toggle snow-toggle" aria-pressed={snowEnabled} onClick={toggleSnow}>
+              <span aria-hidden="true">❄</span> 눈 효과
+            </button>
+          </div>
         </div>
         <div className="bottom-left">
           <div className="guide-anchor">
@@ -189,7 +230,8 @@ function GalleryApp() {
               <ControlsGuide variant="compact" onClose={closeGuide} />
             )}
           </div>
-          <label className="room-navigation">전시실 이동
+          <label className="room-navigation">
+            <span className="room-navigation-label">전시실 이동</span>
             <select value={currentArea.id==='LOBBY'?'':currentArea.id} disabled={paused||rooms.openIds.length===0} onChange={event=>{
               const id=event.target.value;
               if(!rooms.openIds.includes(id))return;

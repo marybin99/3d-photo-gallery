@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { areaAt, areas, BOOK, canStand, moveAndSlide, SPAWN, walls } from '../src/layout.ts'
+import { areaAt, areas, BOOK, canStand, createGalleryLayout, lobbyTree, moveAndSlide, SPAWN, walls } from '../src/layout.ts'
 import { artworks } from '../src/data.ts'
 
 function walkPath(points: [number, number][]) {
@@ -104,6 +104,18 @@ test('collision-resolved routes can enter and leave every room', () => {
   }
 })
 
+test('the lobby tree blocks walking through it and leaves the adjacent room approaches open', () => {
+  for (const rooms of [['A', 'B', 'C'], ['A', 'B', 'C', 'D']]) {
+    const layout = createGalleryLayout(rooms)
+    assert.equal(canStand(lobbyTree.x, lobbyTree.z, undefined, layout), false)
+    const treeApproach = moveAndSlide(lobbyTree.x, 1, 0, -7, undefined, layout)
+    assert.ok(treeApproach.z > lobbyTree.z + lobbyTree.depth / 2)
+    const north = moveAndSlide(1.5, 1, 0, -10, undefined, layout)
+    assert.equal(areaAt(north.x, north.z, layout).id, 'B')
+    const east = moveAndSlide(0, 1, 12, 0, undefined, layout)
+    assert.equal(areaAt(east.x, east.z, layout).id, 'C')
+  }
+})
 
 test('frames face their gallery interior and are supported by solid walls',()=>{
   assert.equal(new Set(artworks.map(art=>art.id)).size,artworks.length)

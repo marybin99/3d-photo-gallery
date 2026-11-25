@@ -51,7 +51,7 @@ test('added room names, empty frames, allocation, labels and artwork conversion 
   assert.equal(art.image,'url')
 })
 
-test('room creation sends only the validated name to the atomic admin RPC',async()=>{
+test('room creation sends the validated name and optional entrance color to the atomic admin RPC',async()=>{
   const calls:{path:string;body:unknown}[]=[]
   const client=createClient('https://room-test.supabase.co','test-key',{
     auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},
@@ -62,9 +62,14 @@ test('room creation sends only the validated name to the atomic admin RPC',async
   })
   const repo=createRoomRepository(client)
   await assert.rejects(()=>repo.create('  '))
+  await assert.rejects(()=>repo.create('봄','red'),/#RRGGBB/)
   assert.equal(calls.length,0)
   assert.equal((await repo.create(' 봄 ')).id,'D')
-  assert.deepEqual(calls,[{path:'/rest/v1/rpc/create_gallery_room',body:{room_name:'봄'}}])
+  assert.equal((await repo.create(' 여름 ','#AB45CD')).id,'D')
+  assert.deepEqual(calls,[
+    {path:'/rest/v1/rpc/create_gallery_room',body:{room_name:'봄'}},
+    {path:'/rest/v1/rpc/create_gallery_room',body:{room_name:'여름',room_entrance_color:'#ab45cd'}},
+  ])
 })
 
 test('room creation surfaces capacity and permission errors without claiming success',async()=>{

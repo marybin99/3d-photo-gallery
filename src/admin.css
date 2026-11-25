@@ -122,6 +122,12 @@
 .admin-page textarea {
   resize: vertical;
 }
+.admin-page input[type='color'] {
+  width: 56px;
+  height: 39px;
+  padding: 4px;
+  cursor: pointer;
+}
 .admin-page input:focus,
 .admin-page select:focus,
 .admin-page textarea:focus {
@@ -280,8 +286,8 @@
 }
 .admin-image-preview img {
   max-width: 100%;
-  height: 220px;
-  object-fit: contain;
+  max-height: 220px;
+  border: 6px solid;
 }
 .admin-image-preview span {
   font-size: 12px;
@@ -393,12 +399,12 @@
 .admin-room-forms form {
   display: flex;
   align-items: flex-end;
+  flex-wrap: wrap;
   gap: 8px;
   min-width: 0;
 }
-.admin-room-forms label {
-  flex: 1;
-  min-width: 0;
+.admin-room-forms .admin-room-name {
+  flex: 1 1 115px;
 }
 .admin-room-forms button {
   white-space: nowrap;
@@ -482,7 +488,7 @@
   gap: 12px;
   margin: 20px 0;
 }
-.admin-room-create label {
+.admin-room-create .admin-room-name {
   flex: 1 1 220px;
   max-width: 420px;
 }
@@ -522,10 +528,7 @@
   .admin-room-item {
     padding: 12px;
   }
-  .admin-room-item form {
-    flex-wrap: wrap;
-  }
-  .admin-room-item form label {
+  .admin-room-forms .admin-room-name {
     flex-basis: 100%;
   }
 }

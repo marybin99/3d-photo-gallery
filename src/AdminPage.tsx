@@ -22,6 +22,7 @@ import { artworkSlots } from './data';
 import { prepareArtworkImage } from './prepareArtworkImage';
 import { useRoomNames } from './useRoomNames';
 import { roomName } from './roomModel';
+import { DEFAULT_FRAME_COLOR } from './galleryColors';
 import RoomSettings from './RoomSettings';
 import AdminGuestbook from './AdminGuestbook';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
@@ -33,6 +34,7 @@ import { canUseRoom, roleLabels, type AdminAccess } from './adminAccess';
 const emptyDraft: ArtworkDraft = {
   slot_id: '',
   youtube_url: '',
+  frame_color: DEFAULT_FRAME_COLOR,
   title: '',
   description: '',
   is_published: false,
@@ -378,6 +380,7 @@ function ArtworkDashboard({
     setMediaType(record.youtube_url ? 'youtube' : 'image');
     setDraft({
       youtube_url: record.youtube_url ?? '',
+      frame_color: record.frame_color ?? DEFAULT_FRAME_COLOR,
       slot_id: record.slot_id,
       title: record.title,
       description: record.description,
@@ -709,9 +712,21 @@ function ArtworkDashboard({
                   </p>
                 </>
               )}
+              <label>
+                액자 색상
+                <input
+                  type="color"
+                  value={draft.frame_color ?? DEFAULT_FRAME_COLOR}
+                  onChange={(event) => setDraft({ ...draft, frame_color: event.target.value })}
+                />
+              </label>
               <div className="admin-image-preview">
                 {currentImage ? (
-                  <img src={currentImage} alt="선택한 작품 미리보기" />
+                  <img
+                    src={currentImage}
+                    alt="선택한 작품 미리보기"
+                    style={{ borderColor: draft.frame_color ?? DEFAULT_FRAME_COLOR }}
+                  />
                 ) : (
                   <span>
                     {mediaType === 'youtube'

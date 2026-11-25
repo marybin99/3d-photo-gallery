@@ -8,6 +8,7 @@ import YouTubePlayer from './YouTubePlayer';
 import ClosedRoomCurtain from './ClosedRoomCurtain';
 import { fillArtworkSlots } from './artworkModel';
 import { roomName, type RoomNames } from './roomModel';
+import { DEFAULT_ENTRANCE_COLOR, DEFAULT_FRAME_COLOR } from './galleryColors';
 import {
   type GalleryLayout,
   moveAndSlide,
@@ -117,7 +118,7 @@ function ImageFrame({
     >
       <mesh position={[0, 0, 0]} castShadow>
         <boxGeometry args={[1.94, frameHeight, 0.11]} />
-        <meshStandardMaterial color="#806d59" roughness={0.65} />
+        <meshStandardMaterial color={art.frameColor ?? DEFAULT_FRAME_COLOR} roughness={0.65} />
       </mesh>
       <mesh position={[0, 0, 0.064]}>
         <planeGeometry args={isVideo?[1.82,1.05875]:[1.74,1.32]} />
@@ -390,20 +391,23 @@ function Doorway({
   label,
   returnLabel,
   closed,
+  color = DEFAULT_ENTRANCE_COLOR,
 }: {
   position: [number, number, number];
   rotation?: number;
   label: string;
   returnLabel: string;
   closed: boolean;
+  color?: string;
 }) {
+  const outlineWidth = color === DEFAULT_ENTRANCE_COLOR ? 0 : 0.012;
   return (
     <group position={position} rotation={[0, rotation, 0]}>
       {closed&&<ClosedRoomCurtain/>}
-      <Wall position={[-2.05, 2, 0]} args={[0.16, 4, 0.42]} color="#ac9477" />
-      <Wall position={[2.05, 2, 0]} args={[0.16, 4, 0.42]} color="#ac9477" />
-      <Wall position={[0, 4.35, 0]} args={[4.3, 0.9, 0.42]} color="#ac9477" />
-      <Text position={[0, 4.32, 0.24]} fontSize={0.28} maxWidth={3.6} overflowWrap="break-word" lineHeight={1.1} textAlign="center" anchorY="middle" color="#fff6e7">
+      <Wall position={[-2.05, 2, 0]} args={[0.16, 4, 0.42]} color={color} />
+      <Wall position={[2.05, 2, 0]} args={[0.16, 4, 0.42]} color={color} />
+      <Wall position={[0, 4.35, 0]} args={[4.3, 0.9, 0.42]} color={color} />
+      <Text position={[0, 4.32, 0.24]} fontSize={0.28} maxWidth={3.6} overflowWrap="break-word" lineHeight={1.1} textAlign="center" anchorY="middle" color="#fff6e7" outlineWidth={outlineWidth} outlineColor="#33291f">
         {label}
       </Text>
       <Text
@@ -411,6 +415,8 @@ function Doorway({
         rotation={[0, Math.PI, 0]}
         fontSize={0.22}
         color="#fff6e7"
+        outlineWidth={outlineWidth}
+        outlineColor="#33291f"
       >
         {returnLabel}
       </Text>
@@ -420,6 +426,7 @@ function Doorway({
 export default function Gallery({
   artworks,
   roomNames,
+  entranceColors,
   slots,
   onSelect,
   onGuestbook,
@@ -432,6 +439,7 @@ export default function Gallery({
 }: {
   artworks: Artwork[];
   roomNames: RoomNames;
+  entranceColors: Record<string, string | undefined>;
   slots: Artwork[];
   onSelect: (a: Artwork) => void;
   onGuestbook: () => void;
@@ -498,6 +506,7 @@ export default function Gallery({
           label={roomName(door.zone,roomNames)}
           returnLabel={roomName(door.returnZone ?? 'LOBBY',roomNames)}
           closed={layout.closedRoomIds.includes(door.zone)}
+          color={entranceColors[door.zone]}
         />
       ))}
       {fillArtworkSlots(artworks, slots).filter(art=>nearbyAreas.has(art.zone)).map((art) => (

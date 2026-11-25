@@ -124,6 +124,7 @@ function GalleryApp() {
             <Gallery
               artworks={catalog.items}
               roomNames={rooms.names}
+              entranceColors={rooms.entranceColors}
               slots={slots}
               layout={layout}
               onSelect={art=>{if(rooms.openIds.includes(art.zone))setSelected(art)}}

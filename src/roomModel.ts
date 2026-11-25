@@ -1,7 +1,7 @@
 export const roomIds = ['A', 'B', 'C'] as const
 export type RoomId = string
 export type RoomNames = Record<string, string>
-export type RoomRecord = {id:RoomId;name:string;is_open:boolean;updated_at:string}
+export type RoomRecord = {id:RoomId;name:string;entrance_color?:string;is_open:boolean;updated_at:string}
 export const defaultRoomNames:RoomNames = {A:'A 전시실',B:'B 전시실',C:'C 전시실'}
 export function roomName(id:string,names:RoomNames=defaultRoomNames) {
   return names[id] ?? (id==='LOBBY'?'로비':id==='CORRIDOR'?'연결 통로':`${id} 전시실`)

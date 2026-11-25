@@ -99,10 +99,12 @@ const ImageFrame = memo(function ImageFrame({
   art,
   onSelect,
   playing,
+  videoPositions,
 }: {
   art: Artwork;
   onSelect: (a: Artwork) => void;
   playing: boolean;
+  videoPositions: Map<string, number>;
 }) {
   const isVideo=!!art.youtubeId;
   const frameHeight=isVideo?1.17875:1.52;
@@ -132,7 +134,9 @@ const ImageFrame = memo(function ImageFrame({
       {/* Blend the video through a depth-tested opening in the canvas so the
           character and other foreground geometry remain in front of it. */}
       {art.youtubeId&&playing&&<Html transform position={[0,0,.1]} distanceFactor={1.0875} pointerEvents="none" occlude="blending" zIndexRange={[2,0]}>
-        <div className="artwork-video-screen"><YouTubePlayer videoId={art.youtubeId} title={art.title} controls={false}/></div>
+        <div className="artwork-video-screen">
+          <YouTubePlayer artworkId={art.id} videoId={art.youtubeId} title={art.title} positions={videoPositions} controls={false} />
+        </div>
       </Html>}
       <mesh position={[0, labelY, 0.08]}>
         <planeGeometry args={[1.35, 0.25]} />
@@ -456,7 +460,8 @@ export default function Gallery({
   onPose,
   mobileInput,
   paused,
-  videoPaused=paused,
+  videoRoomId,
+  videoPositions,
   layout,
 }: {
   artworks: Artwork[];
@@ -471,7 +476,8 @@ export default function Gallery({
   onPose: (p: Pose) => void;
   mobileInput: React.RefObject<{ forward: number; right: number }>;
   paused: boolean;
-  videoPaused?: boolean;
+  videoRoomId: string | null;
+  videoPositions: Map<string, number>;
   layout: GalleryLayout;
 }) {
   // Keep the shader light count bounded as the connected wing grows.
@@ -541,7 +547,7 @@ export default function Gallery({
         />
       ))}
       {visibleArtworks.map((art) => (
-        <ImageFrame key={art.id} art={art} onSelect={onSelect} playing={!videoPaused} />
+        <ImageFrame key={art.id} art={art} onSelect={onSelect} playing={!!art.youtubeId && art.zone === videoRoomId} videoPositions={videoPositions} />
       ))}
       <Text
         position={[4, 2.8, 9.8]}

@@ -1,11 +1,18 @@
 export type YoutubePlayerInstance = {
   mute:()=>void; playVideo:()=>void; pauseVideo:()=>void; destroy:()=>void;
+  loadVideoById:(video:{videoId:string;startSeconds:number})=>void;
+  getCurrentTime:()=>number;
+  getPlayerState:()=>number;
   getIframe:()=>HTMLIFrameElement;
 }
 type YoutubeApi = { Player:new(element:HTMLElement,options:{
   videoId:string; width:string; height:string;
   playerVars:Record<string,string|number>;
-  events:{onReady:(event:{target:YoutubePlayerInstance})=>void;onError:(event:{data:number})=>void};
+  events:{
+    onReady:(event:{target:YoutubePlayerInstance})=>void;
+    onStateChange:(event:{data:number})=>void;
+    onError:(event:{data:number})=>void;
+  };
 })=>YoutubePlayerInstance }
 let pending:Promise<YoutubeApi>|null=null
 

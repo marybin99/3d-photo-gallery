@@ -64,6 +64,7 @@ function GalleryApp() {
     if(next!==poseRef.current){poseRef.current=next;setPose({...next})}
   },[layout]);
   const mobileInput = useRef({ forward: 0, right: 0 });
+  const videoPositions = useRef(new Map<string, number>()).current;
   const [selected, setSelected] = useState<Artwork | null>(null);
   const [guestbook, setGuestbook] = useState(false);
   const selectArtwork = useCallback((art: Artwork) => {
@@ -99,6 +100,7 @@ function GalleryApp() {
   };
   const paused = selected !== null || guestbook || guideMode === 'welcome';
   const currentArea = areaAt(pose.x, pose.z, layout);
+  const currentOpenRoomId = rooms.openIds.includes(currentArea.id) ? currentArea.id : null;
   const nearBook = Math.hypot(pose.x - BOOK.x, pose.z - BOOK.z) < 3.2;
   useEffect(() => {
     const interact = (event: KeyboardEvent) => {
@@ -169,7 +171,8 @@ function GalleryApp() {
               onPose={setPose}
               mobileInput={mobileInput}
               paused={paused}
-              videoPaused={selected!==null||guestbook}
+              videoRoomId={paused ? null : currentOpenRoomId}
+              videoPositions={videoPositions}
             />
           </Suspense>
         </Canvas>
@@ -270,7 +273,11 @@ function GalleryApp() {
               >
                 ×
               </button>
-              {selected.youtubeId?<YouTubePlayer videoId={selected.youtubeId} title={selected.title} controls={true}/>:<img src={selected.image} alt={selected.title} />}
+              {selected.youtubeId && selected.zone === currentOpenRoomId ? (
+                <YouTubePlayer artworkId={selected.id} videoId={selected.youtubeId} title={selected.title} positions={videoPositions} />
+              ) : (
+                <img src={selected.image} alt={selected.title} />
+              )}
               <span className="eyebrow">
                 ARTWORK {selected.id} / {roomName(selected.zone, rooms.names)}
               </span>

@@ -403,8 +403,14 @@
   gap: 8px;
   min-width: 0;
 }
+
 .admin-room-forms .admin-room-name {
   flex: 1 1 115px;
+}
+.admin-room-colors {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
 }
 .admin-room-forms button {
   white-space: nowrap;

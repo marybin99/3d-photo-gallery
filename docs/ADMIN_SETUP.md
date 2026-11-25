@@ -25,12 +25,13 @@ Supabase **SQL Editor → New query**에서 다음 파일 내용을 각각 붙�
 7. [`supabase/guestbook-management.sql`](../supabase/guestbook-management.sql): 방명록 관리 함수.
 8. [`supabase/account-permissions.sql`](../supabase/account-permissions.sql): 계정별 역할·담당 전시실·접근 중지.
 9. [`supabase/account-deletion.sql`](../supabase/account-deletion.sql): 최고 관리자의 계정 삭제와 실패 후 재시도. 반드시 계정 권한 SQL 다음에 적용합니다.
-10. [`supabase/gallery-colors.sql`](../supabase/gallery-colors.sql)로 전시실 입구와 작품 액자 색상을 저장할 수 있게 합니다.
+10. [`supabase/gallery-colors.sql`](../supabase/gallery-colors.sql)로 전시실 입구·간판 글자·작품 액자 색상을 저장할 수 있게 합니다.
 11. [`supabase/gallery-music.sql`](../supabase/gallery-music.sql)로 배경음악 재생 목록과 공개 재생용 음원 저장소를 만듭니다. 배경음악을 이미 설정한 프로젝트에서는 이 파일을 다시 실행하면 기존 음원이 재생 목록에 보존됩니다.
 
 이미 작품 관리 설정을 끝낸 프로젝트는 **3·4·5·6번 파일을 순서대로 추가 실행**하면 됩니다. 기존 작품과 사진은 변경되지 않습니다.
 
 기존 전시실과 작품 관리 설정을 마친 프로젝트에서 색상 기능을 사용하려면 앱 업데이트 전에 **10번 파일**을 실행하세요. 기존 전시실과 작품에는 현재 사용 중인 기본 색상이 적용됩니다.
+입구와 액자 색상 설정을 이미 적용한 프로젝트에서도 **10번 파일**을 다시 실행하면 기존 색상을 유지하면서 간판 글자 색상 설정을 추가할 수 있습니다.
 
 위 스크립트는 다시 실행할 수 있도록 작성했습니다. `gallery-artworks` 버킷은 private 상태로 사용하며 별도로 public으로 바꾸지 않습니다.
 

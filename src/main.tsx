@@ -230,6 +230,7 @@ function GalleryApp() {
               artworks={catalog.items}
               roomNames={rooms.names}
               entranceColors={rooms.entranceColors}
+              signTextColors={rooms.signTextColors}
               snowEnabled={snowEnabled}
               mobileRendering={mobileRendering}
               slots={slots}

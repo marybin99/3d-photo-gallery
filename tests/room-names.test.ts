@@ -54,6 +54,10 @@ test('room rename uses the existing identifier and version without writing artwo
   assert.deepEqual(JSON.parse(calls[1].body),{name:record.name,entrance_color:'#123abc'})
   assert.equal(calls[1].url.searchParams.get('updated_at'),`eq.${record.updated_at}`)
   assert.ok(calls[1].url.searchParams.get('select')?.split(',').includes('entrance_color'))
+  await createRoomRepository(client).rename(record, record.name, undefined, '#FE1234')
+  assert.deepEqual(JSON.parse(calls[2].body),{name:record.name,sign_text_color:'#fe1234'})
+  assert.equal(calls[2].url.searchParams.get('updated_at'),`eq.${record.updated_at}`)
+  assert.ok(calls[2].url.searchParams.get('select')?.split(',').includes('sign_text_color'))
 })
 
 test('room rename reports a conflict instead of overwriting a newer name',async()=>{

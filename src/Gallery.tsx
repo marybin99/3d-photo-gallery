@@ -10,7 +10,11 @@ import LobbyChristmas from './LobbyChristmas';
 import LobbySnow from './LobbySnow';
 import { fillArtworkSlots } from './artworkModel';
 import { roomName, type RoomNames } from './roomModel';
-import { DEFAULT_ENTRANCE_COLOR, DEFAULT_FRAME_COLOR } from './galleryColors';
+import {
+  DEFAULT_ENTRANCE_COLOR,
+  DEFAULT_FRAME_COLOR,
+  DEFAULT_SIGN_TEXT_COLOR,
+} from './galleryColors';
 import {
   type GalleryLayout,
   moveAndSlide,
@@ -27,7 +31,12 @@ import {
   mouseLook,
   movementDelta,
 } from './controls';
-import { followCameraPosition, CAMERA_LOOK_HEIGHT, GALLERY_FOV, lobbyFieldOfView } from './camera';
+import {
+  followCameraPosition,
+  CAMERA_LOOK_HEIGHT,
+  GALLERY_FOV,
+  lobbyFieldOfView,
+} from './camera';
 export { SPAWN } from './layout';
 
 export type Pose = { x: number; z: number; yaw: number };
@@ -106,38 +115,72 @@ const ImageFrame = memo(function ImageFrame({
   playing: boolean;
   videoPositions: Map<string, number>;
 }) {
-  const isVideo=!!art.youtubeId;
-  const frameHeight=isVideo?1.17875:1.52;
-  const labelY=isVideo?-.73:-.88;
+  const isVideo = !!art.youtubeId;
+  const frameHeight = isVideo ? 1.17875 : 1.52;
+  const labelY = isVideo ? -0.73 : -0.88;
   return (
     <group
       position={art.position}
       rotation={[0, art.rotation, 0]}
       scale={1.4}
-      onClick={art.image ? (event) => {
-        event.stopPropagation();
-        onSelect(art);
-      } : undefined}
-      onPointerOver={() => (document.body.style.cursor = art.image ? 'pointer' : 'auto')}
+      onClick={
+        art.image
+          ? (event) => {
+              event.stopPropagation();
+              onSelect(art);
+            }
+          : undefined
+      }
+      onPointerOver={() =>
+        (document.body.style.cursor = art.image ? 'pointer' : 'auto')
+      }
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
       <mesh position={[0, 0, 0]} castShadow>
         <boxGeometry args={[1.94, frameHeight, 0.11]} />
-        <meshStandardMaterial color={art.frameColor ?? DEFAULT_FRAME_COLOR} roughness={0.65} />
+        <meshStandardMaterial
+          color={art.frameColor ?? DEFAULT_FRAME_COLOR}
+          roughness={0.65}
+        />
       </mesh>
       <mesh position={[0, 0, 0.064]}>
-        <planeGeometry args={isVideo?[1.82,1.05875]:[1.74,1.32]} />
+        <planeGeometry args={isVideo ? [1.82, 1.05875] : [1.74, 1.32]} />
         <meshBasicMaterial color="#fdfbf8" />
       </mesh>
-      {art.image && <ArtworkImage url={art.image} width={isVideo?1.74:1.62} height={isVideo?.97875:1.2} />}
-      {art.youtubeId&&!playing&&<Text position={[0,0,.09]} fontSize={.3} color="white">▶</Text>}
+      {art.image && (
+        <ArtworkImage
+          url={art.image}
+          width={isVideo ? 1.74 : 1.62}
+          height={isVideo ? 0.97875 : 1.2}
+        />
+      )}
+      {art.youtubeId && !playing && (
+        <Text position={[0, 0, 0.09]} fontSize={0.3} color="white">
+          ▶
+        </Text>
+      )}
       {/* Blend the video through a depth-tested opening in the canvas so the
           character and other foreground geometry remain in front of it. */}
-      {art.youtubeId&&playing&&<Html transform position={[0,0,.1]} distanceFactor={1.0875} pointerEvents="none" occlude="blending" zIndexRange={[2,0]}>
-        <div className="artwork-video-screen">
-          <YouTubePlayer artworkId={art.id} videoId={art.youtubeId} title={art.title} positions={videoPositions} controls={false} />
-        </div>
-      </Html>}
+      {art.youtubeId && playing && (
+        <Html
+          transform
+          position={[0, 0, 0.1]}
+          distanceFactor={1.0875}
+          pointerEvents="none"
+          occlude="blending"
+          zIndexRange={[2, 0]}
+        >
+          <div className="artwork-video-screen">
+            <YouTubePlayer
+              artworkId={art.id}
+              videoId={art.youtubeId}
+              title={art.title}
+              positions={videoPositions}
+              controls={false}
+            />
+          </div>
+        </Html>
+      )}
       <mesh position={[0, labelY, 0.08]}>
         <planeGeometry args={[1.35, 0.25]} />
         <meshBasicMaterial color="#f8f5ed" />
@@ -188,11 +231,16 @@ function Player({
   const cameraReady = useRef(false);
   const { camera, gl, events, size } = useThree();
   const lobbyFov = lobbyFieldOfView(size.width / Math.max(1, size.height));
-  const lookSurface = events.connected instanceof HTMLElement
-    ? events.connected
-    : gl.domElement.parentElement ?? gl.domElement;
+  const lookSurface =
+    events.connected instanceof HTMLElement
+      ? events.connected
+      : (gl.domElement.parentElement ?? gl.domElement);
   const pitch = useRef(DEFAULT_PITCH);
-  const orbit = useRef({ yaw: pose.current.yaw, pitch: DEFAULT_PITCH, distance: 0 });
+  const orbit = useRef({
+    yaw: pose.current.yaw,
+    pitch: DEFAULT_PITCH,
+    distance: 0,
+  });
   useEffect(() => {
     if (paused) return;
     // HTML video depth blending disables pointer events on the canvas itself.
@@ -234,8 +282,10 @@ function Player({
     if (!p) return;
     const d = Math.min(delta, 0.06);
     if (camera instanceof THREE.PerspectiveCamera) {
-      const targetFov = lobbyFov > GALLERY_FOV && areaAt(p.x, p.z, layout).id === 'LOBBY'
-        ? lobbyFov : GALLERY_FOV;
+      const targetFov =
+        lobbyFov > GALLERY_FOV && areaAt(p.x, p.z, layout).id === 'LOBBY'
+          ? lobbyFov
+          : GALLERY_FOV;
       if (Math.abs(camera.fov - targetFov) > 0.05) {
         camera.fov = THREE.MathUtils.damp(camera.fov, targetFov, 8, d);
         camera.updateProjectionMatrix();
@@ -277,22 +327,31 @@ function Player({
       : THREE.MathUtils.damp(velocity.current.z, desired.z, damping, d);
     if (Math.hypot(velocity.current.x, velocity.current.z) < 0.015)
       velocity.current = { x: 0, z: 0 };
-    const next = velocity.current.x || velocity.current.z ? moveAndSlide(
-      p.x,
-      p.z,
-      velocity.current.x * d,
-      velocity.current.z * d,
-      undefined,
-      layout,
-    ) : p;
+    const next =
+      velocity.current.x || velocity.current.z
+        ? moveAndSlide(
+            p.x,
+            p.z,
+            velocity.current.x * d,
+            velocity.current.z * d,
+            undefined,
+            layout,
+          )
+        : p;
     updateCharacterMotion(motion.current, next.x - p.x, next.z - p.z, d);
     p.x = next.x;
     p.z = next.z;
     if (body.current) body.current.position.set(p.x, 0, p.z);
     const view = orbit.current;
-    view.yaw = resetCamera ? p.yaw : THREE.MathUtils.damp(view.yaw, p.yaw, 22, d);
-    view.pitch = resetCamera ? pitch.current : THREE.MathUtils.damp(view.pitch, pitch.current, 22, d);
-    target.set(...followCameraPosition({ x: p.x, z: p.z, yaw: view.yaw }, view.pitch));
+    view.yaw = resetCamera
+      ? p.yaw
+      : THREE.MathUtils.damp(view.yaw, p.yaw, 22, d);
+    view.pitch = resetCamera
+      ? pitch.current
+      : THREE.MathUtils.damp(view.pitch, pitch.current, 22, d);
+    target.set(
+      ...followCameraPosition({ x: p.x, z: p.z, yaw: view.yaw }, view.pitch),
+    );
     cameraReady.current = true;
     // Collision shortens the radius without pulling the next frame's orbit off course.
     lookAt.set(p.x, CAMERA_LOOK_HEIGHT, p.z);
@@ -306,7 +365,12 @@ function Player({
           Math.max(0.15, lookAt.distanceTo(hit) - 0.15),
         );
     }
-    view.distance = resetCamera ? distance : Math.min(distance, THREE.MathUtils.damp(view.distance, distance, 14, d));
+    view.distance = resetCamera
+      ? distance
+      : Math.min(
+          distance,
+          THREE.MathUtils.damp(view.distance, distance, 14, d),
+        );
     camera.position.copy(lookAt).addScaledVector(ray.direction, view.distance);
     camera.lookAt(lookAt);
     broadcast.current += d;
@@ -416,6 +480,7 @@ function Doorway({
   returnLabel,
   closed,
   color = DEFAULT_ENTRANCE_COLOR,
+  signTextColor = DEFAULT_SIGN_TEXT_COLOR,
 }: {
   position: [number, number, number];
   rotation?: number;
@@ -423,22 +488,40 @@ function Doorway({
   returnLabel: string;
   closed: boolean;
   color?: string;
+  signTextColor?: string;
 }) {
   const outlineWidth = color === DEFAULT_ENTRANCE_COLOR ? 0 : 0.012;
+  const signOutlineColor = useMemo(() => {
+    const { r, g, b } = new THREE.Color(signTextColor);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.25 ? '#33291f' : '#fff6e7';
+  }, [signTextColor]);
   return (
     <group position={position} rotation={[0, rotation, 0]}>
-      {closed&&<ClosedRoomCurtain/>}
+      {closed && <ClosedRoomCurtain />}
       <Wall position={[-2.05, 2, 0]} args={[0.16, 4, 0.42]} color={color} />
       <Wall position={[2.05, 2, 0]} args={[0.16, 4, 0.42]} color={color} />
       <Wall position={[0, 4.35, 0]} args={[4.3, 0.9, 0.42]} color={color} />
-      <Text position={[0, 4.32, 0.24]} fontSize={0.28} maxWidth={3.6} overflowWrap="break-word" lineHeight={1.1} textAlign="center" anchorY="middle" color="#fff6e7" outlineWidth={outlineWidth} outlineColor="#33291f">
+      <Text
+        position={[0, 4.32, 0.24]}
+        fontSize={0.28}
+        maxWidth={3.6}
+        overflowWrap="break-word"
+        lineHeight={1.1}
+        textAlign="center"
+        anchorY="middle"
+        color={signTextColor}
+        outlineWidth={
+          signTextColor === DEFAULT_SIGN_TEXT_COLOR ? outlineWidth : 0.012
+        }
+        outlineColor={signOutlineColor}
+      >
         {label}
       </Text>
       <Text
         position={[0, 4.32, -0.24]}
         rotation={[0, Math.PI, 0]}
         fontSize={0.22}
-        color="#fff6e7"
+        color={DEFAULT_SIGN_TEXT_COLOR}
         outlineWidth={outlineWidth}
         outlineColor="#33291f"
       >
@@ -451,6 +534,7 @@ export default function Gallery({
   artworks,
   roomNames,
   entranceColors,
+  signTextColors,
   snowEnabled,
   mobileRendering,
   slots,
@@ -467,6 +551,7 @@ export default function Gallery({
   artworks: Artwork[];
   roomNames: RoomNames;
   entranceColors: Record<string, string | undefined>;
+  signTextColors: Record<string, string | undefined>;
   snowEnabled: boolean;
   mobileRendering: boolean;
   slots: Artwork[];
@@ -481,15 +566,35 @@ export default function Gallery({
   layout: GalleryLayout;
 }) {
   // Keep the shader light count bounded as the connected wing grows.
-  const focusX=Math.round(pose.current.x/8)*8;
-  const focusZ=Math.round(pose.current.z/8)*8;
-  const nearbyAreas=useMemo(()=>new Set(layout.areas.filter(area=>area.id!=='CORRIDOR'&&!layout.closedRoomIds.includes(area.id))
-    .sort((a,b)=>Math.hypot(a.x-focusX,a.z-focusZ)-Math.hypot(b.x-focusX,b.z-focusZ))
-    .slice(0,4).map(area=>area.id)),[layout,focusX,focusZ]);
-  const visibleDoors=layout.doorways.filter(door=>Math.hypot(door.x-focusX,door.z-focusZ)<32);
+  const focusX = Math.round(pose.current.x / 8) * 8;
+  const focusZ = Math.round(pose.current.z / 8) * 8;
+  const nearbyAreas = useMemo(
+    () =>
+      new Set(
+        layout.areas
+          .filter(
+            (area) =>
+              area.id !== 'CORRIDOR' && !layout.closedRoomIds.includes(area.id),
+          )
+          .sort(
+            (a, b) =>
+              Math.hypot(a.x - focusX, a.z - focusZ) -
+              Math.hypot(b.x - focusX, b.z - focusZ),
+          )
+          .slice(0, 4)
+          .map((area) => area.id),
+      ),
+    [layout, focusX, focusZ],
+  );
+  const visibleDoors = layout.doorways.filter(
+    (door) => Math.hypot(door.x - focusX, door.z - focusZ) < 32,
+  );
   const nearLobby = Math.hypot(focusX, focusZ - 2) < 32;
   const visibleArtworks = useMemo(
-    () => fillArtworkSlots(artworks, slots).filter(art => nearbyAreas.has(art.zone)),
+    () =>
+      fillArtworkSlots(artworks, slots).filter((art) =>
+        nearbyAreas.has(art.zone),
+      ),
     [artworks, slots, nearbyAreas],
   );
   const shadowSize = mobileRendering ? 1024 : 2048;
@@ -520,12 +625,14 @@ export default function Gallery({
             <planeGeometry args={[area.width, area.depth]} />
             <meshStandardMaterial color={area.color} roughness={0.9} />
           </mesh>
-          {nearbyAreas.has(area.id)&&<pointLight
-            position={[area.x, 4.5, area.z]}
-            intensity={15}
-            distance={22}
-            color="#fff1db"
-          />}
+          {nearbyAreas.has(area.id) && (
+            <pointLight
+              position={[area.x, 4.5, area.z]}
+              intensity={15}
+              distance={22}
+              color="#fff1db"
+            />
+          )}
         </group>
       ))}
       {layout.walls.map((w, i) => (
@@ -540,14 +647,21 @@ export default function Gallery({
           key={door.zone}
           position={[door.x, 0, door.z]}
           rotation={door.rotation}
-          label={roomName(door.zone,roomNames)}
-          returnLabel={roomName(door.returnZone ?? 'LOBBY',roomNames)}
+          label={roomName(door.zone, roomNames)}
+          returnLabel={roomName(door.returnZone ?? 'LOBBY', roomNames)}
           closed={layout.closedRoomIds.includes(door.zone)}
           color={entranceColors[door.zone]}
+          signTextColor={signTextColors[door.zone]}
         />
       ))}
       {visibleArtworks.map((art) => (
-        <ImageFrame key={art.id} art={art} onSelect={onSelect} playing={!!art.youtubeId && art.zone === videoRoomId} videoPositions={videoPositions} />
+        <ImageFrame
+          key={art.id}
+          art={art}
+          onSelect={onSelect}
+          playing={!!art.youtubeId && art.zone === videoRoomId}
+          videoPositions={videoPositions}
+        />
       ))}
       <Text
         position={[4, 2.8, 9.8]}

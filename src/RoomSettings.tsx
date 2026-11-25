@@ -1,6 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
-import { DEFAULT_ENTRANCE_COLOR } from './galleryColors';
+import {
+  DEFAULT_ENTRANCE_COLOR,
+  DEFAULT_SIGN_TEXT_COLOR,
+} from './galleryColors';
 import type { RoomRecord } from './roomModel';
 import type { useRoomNames } from './useRoomNames';
 
@@ -16,8 +19,10 @@ export default function RoomSettings({
     [notice, setNotice] = useState('');
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState(DEFAULT_ENTRANCE_COLOR);
+  const [newTextColor, setNewTextColor] = useState(DEFAULT_SIGN_TEXT_COLOR);
   const [deleting, setDeleting] = useState<RoomRecord | null>(null);
-  const createDisabled = saving || rooms.loading || !!rooms.error || rooms.ids.length >= 26;
+  const createDisabled =
+    saving || rooms.loading || !!rooms.error || rooms.ids.length >= 26;
   async function remove() {
     if (!deleting || saving) return;
     setSaving(true);
@@ -42,9 +47,10 @@ export default function RoomSettings({
     setError('');
     setNotice('');
     try {
-      const next = await rooms.create(newName, newColor);
+      const next = await rooms.create(newName, newColor, newTextColor);
       setNewName('');
       setNewColor(DEFAULT_ENTRANCE_COLOR);
+      setNewTextColor(DEFAULT_SIGN_TEXT_COLOR);
       setNotice(
         `‘${next.name}’ 전시실과 액자 12개를 추가했습니다. 전시 준비가 끝나면 오픈해 주세요.`,
       );
@@ -78,12 +84,17 @@ export default function RoomSettings({
       setSaving(false);
     }
   }
-  async function save(record: RoomRecord, name: string, color: string) {
+  async function save(
+    record: RoomRecord,
+    name: string,
+    color: string,
+    textColor: string,
+  ) {
     setSaving(true);
     setError('');
     setNotice('');
     try {
-      const next = await rooms.save(record, name, color);
+      const next = await rooms.save(record, name, color, textColor);
       setNotice(`‘${next.name}’ 전시실 설정을 저장했습니다.`);
       return next;
     } catch (reason) {
@@ -133,26 +144,26 @@ export default function RoomSettings({
       )}
       {canCreate && (
         <form className="admin-room-create" onSubmit={create}>
-          <label className="admin-room-name">
-            새 전시실 이름
-            <input
-              value={newName}
-              onChange={(event) => setNewName(event.target.value)}
-              maxLength={24}
-              required
+          <div className="admin-room-forms">
+            <label className="admin-room-name">
+              새 전시실 이름
+              <input
+                value={newName}
+                onChange={(event) => setNewName(event.target.value)}
+                maxLength={24}
+                required
+                disabled={createDisabled}
+                placeholder="예: 계절의 기억"
+              />
+            </label>
+            <RoomColorFields
+              color={newColor}
+              textColor={newTextColor}
+              setColor={setNewColor}
+              setTextColor={setNewTextColor}
               disabled={createDisabled}
-              placeholder="예: 계절의 기억"
             />
-          </label>
-          <label>
-            입구 색상
-            <input
-              type="color"
-              value={newColor}
-              onChange={(event) => setNewColor(event.target.value)}
-              disabled={createDisabled}
-            />
-          </label>
+          </div>
           <button
             className="admin-primary"
             type="submit"
@@ -217,35 +228,49 @@ function RoomAppearanceForm({
 }: {
   record: RoomRecord;
   disabled: boolean;
-  save: (record: RoomRecord, name: string, color: string) => Promise<RoomRecord | null>;
+  save: (
+    record: RoomRecord,
+    name: string,
+    color: string,
+    textColor: string,
+  ) => Promise<RoomRecord | null>;
   onDelete: () => void;
 }) {
   const [base, setBase] = useState(record),
     [name, setName] = useState(record.name);
   const baseColor = base.entrance_color ?? DEFAULT_ENTRANCE_COLOR;
   const recordColor = record.entrance_color ?? DEFAULT_ENTRANCE_COLOR;
+  const baseTextColor = base.sign_text_color ?? DEFAULT_SIGN_TEXT_COLOR;
+  const recordTextColor = record.sign_text_color ?? DEFAULT_SIGN_TEXT_COLOR;
   const [color, setColor] = useState(recordColor);
-  const dirty = name !== base.name || color !== baseColor;
+  const [textColor, setTextColor] = useState(recordTextColor);
+  const dirty =
+    name !== base.name || color !== baseColor || textColor !== baseTextColor;
+  const appearanceChanged =
+    record.name !== base.name ||
+    recordColor !== baseColor ||
+    recordTextColor !== baseTextColor;
   useEffect(() => {
     // A change to the open status alone need not invalidate appearance edits.
-    if (record.name === base.name && recordColor === baseColor) {
+    if (!appearanceChanged) {
       setBase(record);
     } else if (!dirty) {
       setBase(record);
       setName(record.name);
       setColor(recordColor);
+      setTextColor(recordTextColor);
     }
-  }, [record, recordColor, base.name, baseColor, dirty]);
-  const stale = base.updated_at !== record.updated_at &&
-    (base.name !== record.name || baseColor !== recordColor);
+  }, [record, recordColor, recordTextColor, appearanceChanged, dirty]);
+  const stale = base.updated_at !== record.updated_at && appearanceChanged;
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (disabled || stale) return;
-    const next = await save(base, name, color);
+    const next = await save(base, name, color, textColor);
     if (next) {
       setBase(next);
       setName(next.name);
       setColor(next.entrance_color ?? DEFAULT_ENTRANCE_COLOR);
+      setTextColor(next.sign_text_color ?? DEFAULT_SIGN_TEXT_COLOR);
     }
   }
   return (
@@ -260,21 +285,24 @@ function RoomAppearanceForm({
           disabled={disabled}
         />
       </label>
-      <label>
-        입구 색상
-        <input
-          type="color"
-          value={color}
-          onChange={(event) => setColor(event.target.value)}
-          disabled={disabled}
-        />
-      </label>
+      <RoomColorFields
+        color={color}
+        textColor={textColor}
+        setColor={setColor}
+        setTextColor={setTextColor}
+        disabled={disabled}
+      />
       {stale ? (
-        <button type="button" disabled={disabled} onClick={() => {
-          setBase(record);
-          setName(record.name);
-          setColor(recordColor);
-        }}>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => {
+            setBase(record);
+            setName(record.name);
+            setColor(recordColor);
+            setTextColor(recordTextColor);
+          }}
+        >
           최신 설정 불러오기
         </button>
       ) : (
@@ -293,5 +321,42 @@ function RoomAppearanceForm({
         </button>
       )}
     </form>
+  );
+}
+
+function RoomColorFields({
+  color,
+  textColor,
+  setColor,
+  setTextColor,
+  disabled,
+}: {
+  color: string;
+  textColor: string;
+  setColor: (value: string) => void;
+  setTextColor: (value: string) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="admin-room-colors">
+      <label>
+        입구 색상
+        <input
+          type="color"
+          value={color}
+          onChange={(event) => setColor(event.target.value)}
+          disabled={disabled}
+        />
+      </label>
+      <label>
+        글자 색상
+        <input
+          type="color"
+          value={textColor}
+          onChange={(event) => setTextColor(event.target.value)}
+          disabled={disabled}
+        />
+      </label>
+    </div>
   );
 }

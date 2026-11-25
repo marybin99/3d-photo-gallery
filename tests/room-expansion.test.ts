@@ -51,7 +51,7 @@ test('added room names, empty frames, allocation, labels and artwork conversion 
   assert.equal(art.image,'url')
 })
 
-test('room creation sends the validated name and optional entrance color to the atomic admin RPC',async()=>{
+test('room creation sends the validated name and optional entrance and sign colors to the atomic admin RPC',async()=>{
   const calls:{path:string;body:unknown}[]=[]
   const client=createClient('https://room-test.supabase.co','test-key',{
     auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},
@@ -63,12 +63,15 @@ test('room creation sends the validated name and optional entrance color to the 
   const repo=createRoomRepository(client)
   await assert.rejects(()=>repo.create('  '))
   await assert.rejects(()=>repo.create('봄','red'),/#RRGGBB/)
+  await assert.rejects(()=>repo.create('봄','#aabbcc','white'),/#RRGGBB/)
   assert.equal(calls.length,0)
   assert.equal((await repo.create(' 봄 ')).id,'D')
   assert.equal((await repo.create(' 여름 ','#AB45CD')).id,'D')
+  assert.equal((await repo.create(' 가을 ','#234567','#FF1122')).id,'D')
   assert.deepEqual(calls,[
     {path:'/rest/v1/rpc/create_gallery_room',body:{room_name:'봄'}},
     {path:'/rest/v1/rpc/create_gallery_room',body:{room_name:'여름',room_entrance_color:'#ab45cd'}},
+    {path:'/rest/v1/rpc/create_gallery_room',body:{room_name:'가을',room_entrance_color:'#234567',room_sign_text_color:'#ff1122'}},
   ])
 })
 

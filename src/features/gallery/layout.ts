@@ -98,23 +98,27 @@ export const PLAYER_RADIUS = .35
 function closestPoint(x: number, z: number, b: Barrier) {
   return { x: Math.max(b.x-b.width/2,Math.min(b.x+b.width/2,x)), z: Math.max(b.z-b.depth/2,Math.min(b.z+b.depth/2,z)) }
 }
-export function canStand(x: number, z: number, radius = PLAYER_RADIUS, layout = defaultLayout): boolean {
+export function overlapsBarrier(x: number, z: number, barrier: Barrier, radius = PLAYER_RADIUS) {
+  const closest = closestPoint(x, z, barrier);
+  return Math.hypot(x - closest.x, z - closest.z) < radius - 1e-7;
+}
+export function canStand(x: number, z: number, radius = PLAYER_RADIUS, layout = defaultLayout, ...movableBarriers: Barrier[]): boolean {
   const inBuilding = layout.areas.some(a => !layout.closedRoomIds.includes(a.id) && Math.abs(x-a.x)<=a.width/2 && Math.abs(z-a.z)<=a.depth/2)
-  return inBuilding && !layout.obstacles.some(b=>{
-    const closest=closestPoint(x,z,b)
-    return Math.hypot(x-closest.x,z-closest.z)<radius-1e-7
-  })
+  return inBuilding
+    && !layout.obstacles.some(b => overlapsBarrier(x, z, b, radius))
+    && !movableBarriers.some(b => overlapsBarrier(x, z, b, radius))
 }
 
 // Small swept steps prevent thin-wall tunnelling. Circle projection lets the
 // player slide along walls and round furniture corners without an axis bias.
-export function moveAndSlide(x: number, z: number, dx: number, dz: number, radius = PLAYER_RADIUS, layout = defaultLayout) {
+export function moveAndSlide(x: number, z: number, dx: number, dz: number, radius = PLAYER_RADIUS, layout = defaultLayout, ...movableBarriers: Barrier[]) {
+  const barriers = movableBarriers.length ? [...layout.obstacles, ...movableBarriers] : layout.obstacles
   const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/(radius*.25)))
   for(let step=0;step<steps;step++){
     let nx=x+dx/steps, nz=z+dz/steps
     for(let pass=0;pass<6;pass++){
       let resolved=false
-      for(const b of layout.obstacles){
+      for(const b of barriers){
         const closest=closestPoint(nx,nz,b)
         const ax=nx-closest.x, az=nz-closest.z, distance=Math.hypot(ax,az)
         if(distance>=radius)continue
@@ -134,7 +138,7 @@ export function moveAndSlide(x: number, z: number, dx: number, dz: number, radiu
       }
       if(!resolved)break
     }
-    if(canStand(nx,nz,radius,layout)){x=nx;z=nz}
+    if(canStand(nx,nz,radius,layout,...movableBarriers)){x=nx;z=nz}
   }
   return {x,z}
 }

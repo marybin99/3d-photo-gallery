@@ -45,6 +45,7 @@ export default function ControlsGuide({variant,onClose}:{variant:'welcome'|'comp
         <div><dt>PC 시야 회전</dt><dd>마우스 왼쪽 버튼을 누른 채 드래그</dd></div>
         <div><dt>모바일 이동 · 시야</dt><dd>우측 하단 조이스틱으로 이동<br/>다른 손가락으로 화면을 드래그해 시야 회전</dd></div>
         <div><dt>작품 · 방명록</dt><dd>사진을 클릭하면 크게 볼 수 있어요.<br/>로비의 펼쳐진 책을 누르면 방명록이 열립니다.</dd></div>
+        <div><dt>동물 쓰다듬기</dt><dd>여우나 햄스터를 누르거나, 화면 가운데로 바라보고 <kbd>F</kbd> 키를 눌러보세요.</dd></div>
       </dl>
     </div>
     {welcome&&<><button className="primary controls-guide-confirm" onClick={onClose}>확인 · 전시 둘러보기</button><p className="controls-guide-footer">아래의 ‘조작 안내’ 버튼으로 언제든 다시 볼 수 있어요.</p></>}

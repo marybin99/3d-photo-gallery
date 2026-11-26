@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import { Billboard } from '@react-three/drei';
-import { Group, MathUtils, MeshBasicMaterial, QuadraticBezierCurve3, Vector2, Vector3 } from 'three';
+import { Group, MathUtils, MeshBasicMaterial, QuadraticBezierCurve3, Vector2, Vector3, type Box3 } from 'three';
 import { createFoxHeartTexture } from '../foxHeart';
-import { foxIsVisible, foxViewObstacles } from '../foxInteraction';
 import { createFoxRoute } from '../foxRoute';
 import { overlapsBarrier } from '../layout';
 import { turnTowards, updateCharacterMotion } from '../locomotion';
 import type { Barrier, CharacterMotion, GalleryLayout, Pose } from '../types';
+import { usePetInteraction, type PetTarget } from './usePetInteraction';
 
 const FUR = '#ce541d';
 const HEAD = '#e16929';
@@ -85,15 +85,17 @@ export default function GalleryFox({
   paused,
   playerPose,
   body,
+  viewObstacles,
+  shortcut,
 }: {
   layout: GalleryLayout;
   paused: boolean;
   playerPose: RefObject<Pose>;
   body: RefObject<Barrier>;
+  viewObstacles: Box3[];
+  shortcut: RefObject<PetTarget | null>;
 }) {
   const route = useMemo(() => createFoxRoute(layout), [layout]);
-  const viewObstacles = useMemo(() => foxViewObstacles(layout), [layout]);
-  const camera = useThree((state) => state.camera);
   const heartTexture = useMemo(createFoxHeartTexture, []);
   const root = useRef<Group>(null);
   const rig = useRef<Group>(null);
@@ -121,25 +123,11 @@ export default function GalleryFox({
     return () => query.removeEventListener('change', update);
   }, []);
 
-  const pet = useCallback((hit?: Vector3) => {
-    const fox = root.current;
-    if (paused || !fox) return false;
-    const target = hit ?? new Vector3(fox.position.x, 0.46, fox.position.z);
-    if (!foxIsVisible(camera, target, viewObstacles)) return false;
+  const startPetting = useCallback(() => {
     petTime.current = PET_DURATION;
     setPetted(true);
-    return true;
-  }, [camera, paused, viewObstacles]);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() !== 'f' || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
-      if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, button, [contenteditable]')) return;
-      if (pet()) event.preventDefault();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [pet]);
+  }, []);
+  const pet = usePetInteraction(root, 0.46, !paused, viewObstacles, shortcut, startPetting);
 
   useFrame((_, delta) => {
     const fox = root.current;

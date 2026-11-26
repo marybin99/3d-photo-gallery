@@ -102,17 +102,17 @@ export function overlapsBarrier(x: number, z: number, barrier: Barrier, radius =
   const closest = closestPoint(x, z, barrier);
   return Math.hypot(x - closest.x, z - closest.z) < radius - 1e-7;
 }
-export function canStand(x: number, z: number, radius = PLAYER_RADIUS, layout = defaultLayout, movableBarrier?: Barrier): boolean {
+export function canStand(x: number, z: number, radius = PLAYER_RADIUS, layout = defaultLayout, ...movableBarriers: Barrier[]): boolean {
   const inBuilding = layout.areas.some(a => !layout.closedRoomIds.includes(a.id) && Math.abs(x-a.x)<=a.width/2 && Math.abs(z-a.z)<=a.depth/2)
   return inBuilding
     && !layout.obstacles.some(b => overlapsBarrier(x, z, b, radius))
-    && (!movableBarrier || !overlapsBarrier(x, z, movableBarrier, radius))
+    && !movableBarriers.some(b => overlapsBarrier(x, z, b, radius))
 }
 
 // Small swept steps prevent thin-wall tunnelling. Circle projection lets the
 // player slide along walls and round furniture corners without an axis bias.
-export function moveAndSlide(x: number, z: number, dx: number, dz: number, radius = PLAYER_RADIUS, layout = defaultLayout, movableBarrier?: Barrier) {
-  const barriers = movableBarrier ? [...layout.obstacles, movableBarrier] : layout.obstacles
+export function moveAndSlide(x: number, z: number, dx: number, dz: number, radius = PLAYER_RADIUS, layout = defaultLayout, ...movableBarriers: Barrier[]) {
+  const barriers = movableBarriers.length ? [...layout.obstacles, ...movableBarriers] : layout.obstacles
   const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/(radius*.25)))
   for(let step=0;step<steps;step++){
     let nx=x+dx/steps, nz=z+dz/steps
@@ -138,7 +138,7 @@ export function moveAndSlide(x: number, z: number, dx: number, dz: number, radiu
       }
       if(!resolved)break
     }
-    if(canStand(nx,nz,radius,layout,movableBarrier)){x=nx;z=nz}
+    if(canStand(nx,nz,radius,layout,...movableBarriers)){x=nx;z=nz}
   }
   return {x,z}
 }

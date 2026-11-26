@@ -7,6 +7,7 @@ import ArtworkImage from '../../artworks/components/ArtworkImage';
 import YouTubePlayer from '../../youtube/components/YouTubePlayer';
 import ClosedRoomCurtain from './ClosedRoomCurtain';
 import LobbyChristmas from './LobbyChristmas';
+import LobbyHamster from './LobbyHamster';
 import LobbySnow from './LobbySnow';
 import { fillArtworkSlots } from '../../artworks/artworkModel';
 import { roomName } from '../../rooms/roomModel';
@@ -25,6 +26,9 @@ import {
 } from '../layout';
 import Character from './Character';
 import GalleryFox from './GalleryFox';
+import { companionViewObstacles } from '../companionInteraction';
+import { HAMSTER_COLLISION_SIZE, HAMSTER_PATCH, HAMSTER_START } from '../hamsterRoam';
+import type { PetTarget } from './usePetInteraction';
 import { updateCharacterMotion } from '../locomotion';
 import type { Barrier, CharacterMotion, GalleryLayout, MovementInput, Pose } from '../types';
 import {
@@ -214,6 +218,7 @@ function Player({
   paused,
   layout,
   foxBody,
+  hamsterBody,
 }: {
   pose: React.RefObject<Pose>;
   onPose: (p: Pose) => void;
@@ -221,6 +226,7 @@ function Player({
   paused: boolean;
   layout: GalleryLayout;
   foxBody: React.RefObject<Barrier>;
+  hamsterBody: React.RefObject<Barrier>;
 }) {
   const body = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({
@@ -339,6 +345,7 @@ function Player({
             undefined,
             layout,
             foxBody.current,
+            hamsterBody.current,
           )
         : p;
     updateCharacterMotion(motion.current, next.x - p.x, next.z - p.z, d);
@@ -569,6 +576,29 @@ export default function Gallery({
   layout: GalleryLayout;
 }) {
   const foxBody = useRef<Barrier>({ x: 0, z: 0, width: 0.76, depth: 0.76 });
+  const hamsterBody = useRef<Barrier>({
+    x: HAMSTER_PATCH.x + HAMSTER_START.x,
+    z: HAMSTER_PATCH.z + HAMSTER_START.z,
+    width: HAMSTER_COLLISION_SIZE,
+    depth: HAMSTER_COLLISION_SIZE,
+  });
+  const foxShortcut = useRef<PetTarget | null>(null);
+  const hamsterShortcut = useRef<PetTarget | null>(null);
+  const viewObstacles = useMemo(() => companionViewObstacles(layout), [layout]);
+  useEffect(() => {
+    if (paused) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== 'f' || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select, button, [contenteditable]')) return;
+      const foxScore = foxShortcut.current?.score() ?? Infinity;
+      const hamsterScore = hamsterShortcut.current?.score() ?? Infinity;
+      if (!Number.isFinite(Math.min(foxScore, hamsterScore))) return;
+      (foxScore <= hamsterScore ? foxShortcut.current : hamsterShortcut.current)?.pet();
+      event.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [paused]);
   // Keep the shader light count bounded as the connected wing grows.
   const focusX = Math.round(pose.current.x / 8) * 8;
   const focusZ = Math.round(pose.current.z / 8) * 8;
@@ -685,8 +715,23 @@ export default function Gallery({
       </Text>
       <GuestbookDesk onOpen={onGuestbook} />
       {nearLobby && <LobbyChristmas />}
+      <LobbyHamster
+        active={nearLobby}
+        paused={paused}
+        body={hamsterBody}
+        playerPose={pose}
+        viewObstacles={viewObstacles}
+        shortcut={hamsterShortcut}
+      />
       {nearLobby && snowEnabled && <LobbySnow />}
-      <GalleryFox layout={layout} paused={paused} playerPose={pose} body={foxBody} />
+      <GalleryFox
+        layout={layout}
+        paused={paused}
+        playerPose={pose}
+        body={foxBody}
+        viewObstacles={viewObstacles}
+        shortcut={foxShortcut}
+      />
       <Player
         pose={pose}
         onPose={onPose}
@@ -694,6 +739,7 @@ export default function Gallery({
         paused={paused}
         layout={layout}
         foxBody={foxBody}
+        hamsterBody={hamsterBody}
       />
     </>
   );

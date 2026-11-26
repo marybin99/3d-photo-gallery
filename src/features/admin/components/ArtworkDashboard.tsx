@@ -281,7 +281,7 @@ export default function ArtworkDashboard({
           canCreate={access.role === 'owner' || access.room_ids === null}
         />
       )}
-      <div className="admin-summary">
+      <div className="admin-summary tw:flex tw:gap-7.5 tw:py-5 tw:text-[12px] tw:text-admin-muted tw:admin-compact:gap-4.5">
         <span>
           등록{' '}
           <b>
@@ -332,7 +332,7 @@ export default function ArtworkDashboard({
               + 새 작품
             </button>
           </div>
-          <label className="admin-filter">
+          <label className="admin-filter tw:mb-5">
             전시실
             <select
               value={filter}
@@ -493,7 +493,7 @@ export default function ArtworkDashboard({
                   }
                 />
               </label>
-              <div className="admin-image-preview">
+              <div className="admin-image-preview tw:grid tw:min-h-50 tw:place-items-center tw:rounded-[5px] tw:bg-[#eae2d7] tw:p-3">
                 {currentImage ? (
                   <img
                     src={currentImage}

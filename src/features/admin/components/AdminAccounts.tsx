@@ -358,7 +358,7 @@ export default function AdminAccounts({
                   </label>
                   {!allRooms && (
                     <div
-                      className="admin-scope-options"
+                      className="tw:grid tw:gap-2.5 tw:rounded-[10px] tw:border tw:border-solid tw:border-[#d6d0c4] tw:p-3.5"
                       role="group"
                       aria-label="담당 전시실"
                     >

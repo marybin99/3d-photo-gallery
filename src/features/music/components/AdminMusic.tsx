@@ -74,7 +74,7 @@ export default function AdminMusic({
   const busy = loading || saving;
   return (
     <section
-      className="admin-card admin-music"
+      className="admin-card admin-music tw:mx-auto tw:max-w-135"
       aria-labelledby="admin-music-heading"
     >
       <h2 id="admin-music-heading">배경음악</h2>
@@ -133,10 +133,13 @@ export default function AdminMusic({
             </fieldset>
           </form>
           {tracks.length > 0 && (
-            <ol className="admin-music-tracks" aria-label="배경음악 재생 목록">
+            <ol
+              className="admin-music-tracks tw:ps-6"
+              aria-label="배경음악 재생 목록"
+            >
               {tracks.map((track) => (
                 <li key={track.path}>
-                  <div className="admin-music-track">
+                  <div className="admin-music-track tw:flex tw:items-start tw:justify-between tw:gap-3">
                     <div>
                       <strong>{track.title}</strong>
                       <audio
@@ -180,6 +183,7 @@ export default function AdminMusic({
               </a>
               <button
                 type="button"
+                className="tw:ms-2.5"
                 disabled={busy}
                 onClick={() =>
                   void change(async () => {

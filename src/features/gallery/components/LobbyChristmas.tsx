@@ -4,6 +4,7 @@ import {
   type InstancedMesh,
 } from 'three';
 import { lobbyTree } from '../layout';
+import TreeKoala from './TreeKoala';
 
 type Position = [number, number, number];
 type Decoration = { position: Position; color: string; radius: number };
@@ -179,6 +180,7 @@ export default memo(function LobbyChristmas() {
         </mesh>
         <OrnamentBatch items={baubles} />
         <OrnamentBatch items={treeBulbs} glow />
+        <TreeKoala />
         <Gift position={[-0.6, 0.16, 0.72]} size={[0.52, 0.32, 0.45]} color="#b03b43" ribbon="#eec981" />
         <Gift position={[0.08, 0.125, 0.92]} size={[0.41, 0.25, 0.37]} color="#d3ae62" ribbon="#8c2933" />
         <Gift position={[0.61, 0.18, 0.57]} size={[0.46, 0.36, 0.51]} color="#efe3ca" ribbon="#2c6047" />

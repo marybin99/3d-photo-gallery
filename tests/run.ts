@@ -2,6 +2,7 @@ import './layout.test.ts';
 import './controls.test.ts';
 import './locomotion.test.ts';
 import './character-render.test.ts';
+import './fox-route.test.ts';
 import './mobile-controls.test.ts';
 import './camera.test.ts';
 import './artwork-management.test.ts';

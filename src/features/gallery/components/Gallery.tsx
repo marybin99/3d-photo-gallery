@@ -24,8 +24,9 @@ import {
   desk,
 } from '../layout';
 import Character from './Character';
+import GalleryFox from './GalleryFox';
 import { updateCharacterMotion } from '../locomotion';
-import type { CharacterMotion, GalleryLayout, MovementInput, Pose } from '../types';
+import type { Barrier, CharacterMotion, GalleryLayout, MovementInput, Pose } from '../types';
 import {
   bindMouseLook,
   DEFAULT_PITCH,
@@ -212,12 +213,14 @@ function Player({
   mobileInput,
   paused,
   layout,
+  foxBody,
 }: {
   pose: React.RefObject<Pose>;
   onPose: (p: Pose) => void;
   mobileInput: React.RefObject<MovementInput>;
   paused: boolean;
   layout: GalleryLayout;
+  foxBody: React.RefObject<Barrier>;
 }) {
   const body = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({
@@ -335,6 +338,7 @@ function Player({
             velocity.current.z * d,
             undefined,
             layout,
+            foxBody.current,
           )
         : p;
     updateCharacterMotion(motion.current, next.x - p.x, next.z - p.z, d);
@@ -564,6 +568,7 @@ export default function Gallery({
   videoPositions: Map<string, number>;
   layout: GalleryLayout;
 }) {
+  const foxBody = useRef<Barrier>({ x: 0, z: 0, width: 0.76, depth: 0.76 });
   // Keep the shader light count bounded as the connected wing grows.
   const focusX = Math.round(pose.current.x / 8) * 8;
   const focusZ = Math.round(pose.current.z / 8) * 8;
@@ -681,12 +686,14 @@ export default function Gallery({
       <GuestbookDesk onOpen={onGuestbook} />
       {nearLobby && <LobbyChristmas />}
       {nearLobby && snowEnabled && <LobbySnow />}
+      <GalleryFox layout={layout} paused={paused} playerPose={pose} body={foxBody} />
       <Player
         pose={pose}
         onPose={onPose}
         mobileInput={mobileInput}
         paused={paused}
         layout={layout}
+        foxBody={foxBody}
       />
     </>
   );

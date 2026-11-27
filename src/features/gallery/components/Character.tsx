@@ -1,58 +1,221 @@
-import { useRef, type RefObject } from 'react'
-import { useFrame } from '@react-three/fiber'
-import * as THREE from 'three'
-import type { CharacterMotion } from '../types'
+import { useRef, type RefObject } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { Group, LatheGeometry, MathUtils, Shape, SphereGeometry, SplineCurve, Vector2, type BufferGeometry, type MeshStandardMaterial } from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { DEFAULT_AVATAR, type AvatarChoice } from '../avatar';
+import type { CharacterMotion } from '../types';
+import AvatarHair from './AvatarHair';
+import { plush } from './avatarMaterials';
 
-export default function Character({motion}:{motion:RefObject<CharacterMotion>}) {
-  const heading=useRef<THREE.Group>(null)
-  const rig=useRef<THREE.Group>(null)
-  const leftHip=useRef<THREE.Group>(null), rightHip=useRef<THREE.Group>(null)
-  const leftKnee=useRef<THREE.Group>(null), rightKnee=useRef<THREE.Group>(null)
-  const leftArm=useRef<THREE.Group>(null), rightArm=useRef<THREE.Group>(null)
-  const head=useRef<THREE.Group>(null)
-  const blend=useRef(0)
-  useFrame(({clock},delta)=>{
-    const d=Math.min(delta,.06)
-    const m=motion.current
-    // Keep world heading separate from the local gait's lean and sway.
-    if(heading.current)heading.current.rotation.y=m.facing
-    blend.current=THREE.MathUtils.damp(blend.current,Math.min(1,m.speed/3.6),12,d)
-    const weight=blend.current, phase=m.distance*Math.PI
-    const swing=Math.sin(phase)*.65*weight
-    if(leftHip.current)leftHip.current.rotation.x=swing
-    if(rightHip.current)rightHip.current.rotation.x=-swing
-    if(leftKnee.current)leftKnee.current.rotation.x=-Math.max(0,-Math.sin(phase))*.7*weight
-    if(rightKnee.current)rightKnee.current.rotation.x=-Math.max(0,Math.sin(phase))*.7*weight
-    if(leftArm.current)leftArm.current.rotation.x=-swing*.8-.08
-    if(rightArm.current)rightArm.current.rotation.x=swing*.8-.08
-    if(rig.current){
-      rig.current.position.y=(1-Math.cos(phase*2))*.025*weight+Math.sin(clock.elapsedTime*1.8)*.006*(1-weight)
-      rig.current.rotation.z=Math.sin(phase)*.025*weight
-      rig.current.rotation.x=.035*weight
+type Point = [number, number, number];
+
+const sphere = new SphereGeometry(1, 32, 24);
+
+function sculpt(geometry: BufferGeometry, profile: (x: number, y: number, z: number) => Point) {
+  const positions = geometry.attributes.position;
+  for (let i = 0; i < positions.count; i++) {
+    positions.setXYZ(i, ...profile(positions.getX(i), positions.getY(i), positions.getZ(i)));
+  }
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+function signedPower(value: number, exponent: number) {
+  return Math.sign(value) * Math.abs(value) ** exponent;
+}
+
+const face = sculpt(new SphereGeometry(1, 56, 36), (x, y, z) => {
+  const jawTaper = MathUtils.smoothstep(-y, .14, .84) * .038;
+  const cheek = 1 - .11 * y - .05 * y ** 2 - jawTaper;
+  return [
+    signedPower(x, .72) * cheek,
+    signedPower(y, .49),
+    signedPower(z, .79) * (1 + .075 * y),
+  ];
+});
+
+function taperedBox(segments: number, radius: number, widthSlope: number, depthSlope: number) {
+  const geometry = new RoundedBoxGeometry(2, 2, 2, segments, radius);
+  const { position, normal } = geometry.attributes;
+  for (let i = 0; i < position.count; i++) {
+    const x = position.getX(i);
+    const y = position.getY(i);
+    const z = position.getZ(i);
+    const width = 1 + widthSlope * y;
+    const depth = 1 + depthSlope * y;
+    position.setXYZ(i, x * width, y, z * depth);
+    const nx = normal.getX(i) / width;
+    const nz = normal.getZ(i) / depth;
+    const ny = normal.getY(i) - nx * x * widthSlope - nz * z * depthSlope;
+    const length = Math.hypot(nx, ny, nz);
+    normal.setXYZ(i, nx / length, ny / length, nz / length);
+  }
+  return geometry;
+}
+
+// The sweatshirt follows a continuous profile from its hem to the shoulders.
+const shirtProfile = new SplineCurve([
+  new Vector2(0, .238),
+  new Vector2(.226, .238),
+  new Vector2(.31, .241),
+  new Vector2(.344, .253),
+  new Vector2(.348, .274),
+  new Vector2(.345, .297),
+  new Vector2(.335, .371),
+  new Vector2(.312, .499),
+  new Vector2(.278, .628),
+  new Vector2(.231, .703),
+  new Vector2(.16, .729),
+  new Vector2(0, .742),
+]);
+const hoodie = sculpt(
+  new LatheGeometry(shirtProfile.getPoints(64), 56),
+  (x, y, z) => {
+    const radius = Math.hypot(x, z);
+    if (radius < .0001) return [0, y, .008];
+    return [
+      signedPower(x / radius, .72) * radius,
+      y,
+      signedPower(z / radius, .81) * radius * .79 + .012,
+    ];
+  },
+);
+const sleeve = taperedBox(4, .81, .08, .06);
+const hood = sculpt(new SphereGeometry(1, 36, 24), (x, y, z) => [
+  x * (1 + .38 * y), y, z - .32 * y,
+]);
+const hems = new RoundedBoxGeometry(2, 2, 2, 4, .46);
+const shoes = new RoundedBoxGeometry(2, 2, 2, 5, .81);
+const eye = new RoundedBoxGeometry(2, 2, 2, 4, .9);
+
+const star = new Shape();
+for (let i = 0; i < 10; i++) {
+  const angle = Math.PI / 2 + i * Math.PI / 5;
+  const radius = i % 2 === 0 ? .081 : .04;
+  const x = Math.cos(angle) * radius;
+  const y = Math.sin(angle) * radius;
+  if (i === 0) star.moveTo(x, y);
+  else star.lineTo(x, y);
+}
+star.closePath();
+
+function PlushShape({
+  position,
+  size,
+  rotation,
+  material,
+  geometry = sphere,
+  shadow = true,
+}: {
+  position: Point;
+  size: Point;
+  rotation?: Point;
+  material: MeshStandardMaterial;
+  geometry?: BufferGeometry;
+  shadow?: boolean;
+}) {
+  return (
+    <mesh position={position} scale={size} rotation={rotation} castShadow={shadow}>
+      <primitive object={geometry} attach="geometry" />
+      <primitive object={material} attach="material" />
+    </mesh>
+  );
+}
+
+export default function Character({
+  motion,
+  avatar = DEFAULT_AVATAR,
+}: {
+  motion?: RefObject<CharacterMotion>;
+  avatar?: AvatarChoice;
+}) {
+  const heading = useRef<Group>(null);
+  const rig = useRef<Group>(null);
+  const leftLeg = useRef<Group>(null);
+  const rightLeg = useRef<Group>(null);
+  const leftArm = useRef<Group>(null);
+  const rightArm = useRef<Group>(null);
+  const head = useRef<Group>(null);
+  const blend = useRef(0);
+
+  useFrame(({ clock }, delta) => {
+    if (!motion) return;
+    const { facing, speed, distance } = motion.current;
+    if (heading.current) heading.current.rotation.y = facing;
+    blend.current = MathUtils.damp(blend.current, Math.min(1, speed / 3.6), 12, Math.min(delta, .06));
+    const weight = blend.current;
+    const phase = distance * Math.PI;
+    const swing = Math.sin(phase) * .48 * weight;
+    if (leftLeg.current) leftLeg.current.rotation.x = swing;
+    if (rightLeg.current) rightLeg.current.rotation.x = -swing;
+    if (leftArm.current) leftArm.current.rotation.x = -swing * .8;
+    if (rightArm.current) rightArm.current.rotation.x = swing * .8;
+    if (rig.current) {
+      rig.current.position.y = (1 - Math.cos(phase * 2)) * .025 * weight
+        + Math.sin(clock.elapsedTime * 1.8) * .005 * (1 - weight);
+      rig.current.rotation.z = Math.sin(phase) * .023 * weight;
+      rig.current.rotation.x = .035 * weight;
     }
-    if(head.current)head.current.rotation.z=-Math.sin(phase)*.015*weight
-  })
-  return <group ref={heading} name="character-heading"><group ref={rig} name="character-gait">
-    <mesh position={[0,1.15,0]} castShadow><capsuleGeometry args={[.25,.46,6,12]}/><meshStandardMaterial color="#9c8a99"/></mesh>
-    <group ref={head} position={[0,1.65,0]}>
-      <mesh castShadow><sphereGeometry args={[.25,20,16]}/><meshStandardMaterial color="#edc8af"/></mesh>
-      <mesh position={[0,.04,0]} castShadow><sphereGeometry args={[.26,20,12,0,Math.PI*2,0,Math.PI*.51]}/><meshStandardMaterial color="#483e3a"/></mesh>
-      {[-1,1].map(side=><mesh key={side} position={[side*.085,.02,-.232]}><sphereGeometry args={[.027,8,8]}/><meshStandardMaterial color="#382e2a"/></mesh>)}
-      <mesh position={[0,-.035,-.25]}><sphereGeometry args={[.04,8,8]}/><meshStandardMaterial color="#dfb599"/></mesh>
+    if (head.current) head.current.rotation.z = -Math.sin(phase) * .015 * weight;
+  });
+
+  return (
+    <group ref={heading} name="character-heading">
+      <group ref={rig} name="character-gait">
+        <mesh castShadow>
+          <primitive object={hoodie} attach="geometry" />
+          <primitive object={plush.hoodie} attach="material" />
+        </mesh>
+        <PlushShape position={[0, .664, .174]} size={[.238, .148, .149]} material={plush.hoodie} geometry={hood} />
+        <PlushShape position={[0, .743, -.037]} size={[.145, .057, .11]} material={plush.skin} />
+        <PlushShape position={[-.086, .713, -.072]} size={[.135, .034, .092]} rotation={[.04, -.22, -.12]} material={plush.trim} />
+        <PlushShape position={[.078, .711, -.084]} size={[.134, .035, .089]} rotation={[.04, .24, .18]} material={plush.hoodie} />
+        <mesh position={[0, .491, -.243]} rotation={[0, Math.PI, 0]} castShadow>
+          <extrudeGeometry args={[star, { depth: .005, bevelEnabled: true, bevelThickness: .006, bevelSize: .008, bevelSegments: 4 }]} />
+          <primitive object={plush.shorts} attach="material" />
+        </mesh>
+        <group position={[0, .741, 0]} scale={[1, 1.12, 1]} ref={head} name="avatar-head">
+          <PlushShape position={[0, .416, -.026]} size={[.473, .416, .375]} material={plush.skin} geometry={face} />
+          <AvatarHair style={avatar.hair} />
+          {[-1, 1].map((side) => (
+            <group key={side}>
+              <PlushShape position={[side * .453, .256, -.067]} size={[.105, .123, .097]} rotation={[0, side * -.22, side * .26]} material={plush.skin} />
+              <PlushShape position={[side * .492, .253, -.147]} size={[.041, .058, .011]} rotation={[0, side * -.39, side * .26]} material={plush.ear} shadow={false} />
+              <PlushShape position={[side * .147, .353, -.39]} size={[.028, .058, .019]} rotation={[0, side * -.22, side * .018]} material={plush.eyes} geometry={eye} shadow={false} />
+              {[-1, 0, 1].map((stroke) => {
+                const x = side * .269 + stroke * .026;
+                return (
+                  <PlushShape
+                    key={stroke}
+                    position={[x, .261, -.356 + (Math.abs(x) - .269) * .28]}
+                    size={[.009, .023, .009]}
+                    rotation={[0, side * -.39, -.61]}
+                    material={plush.blush}
+                    shadow={false}
+                  />
+                );
+              })}
+            </group>
+          ))}
+        </group>
+        {[-1, 1].map((side) => (
+          <group key={side}>
+            <group ref={side < 0 ? leftLeg : rightLeg} position={[side * .144, .301, .012]}>
+              <PlushShape position={[0, -.079, .007]} size={[.147, .084, .158]} material={plush.shorts} geometry={hems} />
+              <PlushShape position={[0, -.147, .005]} size={[.147, .025, .158]} material={plush.shortsHem} geometry={hems} />
+              <PlushShape position={[side * .006, -.23, -.053]} size={[.148, .071, .174]} material={plush.shoes} geometry={shoes} />
+            </group>
+            <group ref={side < 0 ? leftArm : rightArm} position={[side * .206, .657, .024]} rotation={[0, 0, side * .42]}>
+              <PlushShape position={[0, -.154, 0]} size={[.117, .198, .151]} material={plush.hoodie} geometry={sleeve} />
+              <PlushShape position={[0, -.31, -.002]} size={[.111, .043, .133]} material={plush.hoodie} geometry={shoes} />
+              <PlushShape position={[0, -.365, -.021]} size={[.083, .073, .083]} material={plush.skin} />
+              <PlushShape position={[-side * .043, -.361, -.071]} size={[.032, .043, .038]} material={plush.skin} />
+            </group>
+            <PlushShape position={[side * .081, .629, -.194]} size={[.01, .087, .014]} rotation={[-.2, 0, side * .105]} material={plush.cords} />
+            <PlushShape position={[side * .088, .552, -.219]} size={[.015, .019, .014]} material={plush.cords} />
+          </group>
+        ))}
+      </group>
     </group>
-    {[-1,1].map(side=><group key={`leg-${side}`} ref={side===-1?leftHip:rightHip} position={[side*.14,.85,0]}>
-      <mesh position={[0,-.18,0]} castShadow><capsuleGeometry args={[.105,.22,4,10]}/><meshStandardMaterial color="#44434a"/></mesh>
-      <group ref={side===-1?leftKnee:rightKnee} position={[0,-.36,0]}>
-        <mesh position={[0,-.18,0]} castShadow><capsuleGeometry args={[.085,.23,4,10]}/><meshStandardMaterial color="#44434a"/></mesh>
-        <mesh position={[0,-.39,-.065]} castShadow><boxGeometry args={[.19,.12,.32]}/><meshStandardMaterial color="#ede4d7" roughness={.8}/></mesh>
-      </group>
-    </group>)}
-    {[-1,1].map(side=><group key={`arm-${side}`} ref={side===-1?leftArm:rightArm} position={[side*.31,1.36,0]} rotation={[0,0,side*.08]}>
-      <mesh position={[0,-.14,0]} castShadow><capsuleGeometry args={[.09,.19,4,10]}/><meshStandardMaterial color="#9c8a99"/></mesh>
-      <group position={[0,-.3,0]} rotation={[-.18,0,0]}>
-        <mesh position={[0,-.12,0]} castShadow><capsuleGeometry args={[.07,.15,4,10]}/><meshStandardMaterial color="#9c8a99"/></mesh>
-        <mesh position={[0,-.26,0]} castShadow><sphereGeometry args={[.075,10,8]}/><meshStandardMaterial color="#edc8af"/></mesh>
-      </group>
-    </group>)}
-  </group></group>
+  );
 }

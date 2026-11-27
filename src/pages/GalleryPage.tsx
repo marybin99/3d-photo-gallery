@@ -1,6 +1,8 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import Gallery from '../features/gallery/components/Gallery';
+import AvatarPicker from '../features/gallery/components/AvatarPicker';
+import { loadAvatar, saveAvatar, type AvatarChoice } from '../features/gallery/avatar';
 import { followCameraPosition, GALLERY_FOV } from '../features/gallery/camera';
 import { artworkSlots } from '../features/artworks/artworkSlots';
 import type { Artwork } from '../features/artworks/types';
@@ -38,6 +40,9 @@ function initialSnowEnabled() {
 }
 
 export default function GalleryPage() {
+  const [avatar, setAvatar] = useState(loadAvatar);
+  const [editingAvatar, setEditingAvatar] = useState(false);
+  const choosingAvatar = !avatar || editingAvatar;
   const rooms = useRoomNames(supabase);
   const roomKey = rooms.ids.join(',');
   const slots = useMemo(() => artworkSlots(roomKey.split(',')), [roomKey]);
@@ -86,14 +91,20 @@ export default function GalleryPage() {
       art && openSlots.some((slot) => slot.id === art.id) ? art : null,
     );
   }, [openSlots]);
-  const [guideMode, setGuideMode] = useState<'welcome' | 'compact' | null>(
-    'welcome',
-  );
+  const [showControls, setShowControls] = useState(false);
   const galleryView = useRef<HTMLDivElement>(null);
   const closeGuide = () => {
-    setGuideMode(null);
+    setShowControls(false);
     galleryView.current?.focus({ preventScroll: true });
   };
+  const enterGallery = (choice: AvatarChoice) => {
+    saveAvatar(choice);
+    setAvatar(choice);
+    setEditingAvatar(false);
+  };
+  useEffect(() => {
+    if (!choosingAvatar) galleryView.current?.focus({ preventScroll: true });
+  }, [choosingAvatar]);
   const [minimap, setMinimap] = useState(true);
   const [mobileRendering, setMobileRendering] = useState(
     () => window.matchMedia(MOBILE_RENDERING).matches,
@@ -115,7 +126,7 @@ export default function GalleryPage() {
       // Keep the current view usable without storage.
     }
   };
-  const paused = selected !== null || guestbook || guideMode === 'welcome';
+  const paused = choosingAvatar || selected !== null || guestbook;
   const currentArea = areaAt(pose.x, pose.z, layout);
   const currentOpenRoomId = rooms.openIds.includes(currentArea.id)
     ? currentArea.id
@@ -150,20 +161,27 @@ export default function GalleryPage() {
   useEffect(() => {
     mobileInput.current = { forward: 0, right: 0 };
     const close = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' && !choosingAvatar) {
         setSelected(null);
         setGuestbook(false);
-        setGuideMode(null);
+        setShowControls(false);
         galleryView.current?.focus({ preventScroll: true });
       }
     };
     window.addEventListener('keydown', close);
     return () => window.removeEventListener('keydown', close);
-  }, [paused]);
+  }, [choosingAvatar, paused]);
   const reset = () => {
     poseRef.current = { ...SPAWN };
     setPose({ ...SPAWN });
   };
+  if (!avatar) {
+    return (
+      <main>
+        <AvatarPicker initial={null} onConfirm={enterGallery} />
+      </main>
+    );
+  }
   return (
     <main>
       <div
@@ -182,6 +200,7 @@ export default function GalleryPage() {
         >
           <Suspense fallback={null}>
             <Gallery
+              avatar={avatar}
               artworks={catalog.items}
               roomNames={rooms.names}
               entranceColors={rooms.entranceColors}
@@ -254,6 +273,16 @@ export default function GalleryPage() {
           )}
           <div className="map-actions">
             <button
+              type="button"
+              className="map-toggle"
+              onClick={() => {
+                setShowControls(false);
+                setEditingAvatar(true);
+              }}
+            >
+              캐릭터 변경
+            </button>
+            <button
               className="map-toggle"
               onClick={() => setMinimap((v) => !v)}
             >
@@ -272,16 +301,16 @@ export default function GalleryPage() {
         <div className="bottom-left">
           <div className="guide-anchor">
             <button
-              aria-expanded={guideMode === 'compact'}
+              aria-expanded={showControls}
               aria-controls="compact-controls"
               onClick={() => {
-                setGuideMode((mode) => (mode === 'compact' ? null : 'compact'));
+                setShowControls((open) => !open);
                 galleryView.current?.focus({ preventScroll: true });
               }}
             >
               ⓘ 조작 안내
             </button>
-            {guideMode === 'compact' && !selected && !guestbook && (
+            {showControls && !selected && !guestbook && (
               <ControlsGuide variant="compact" onClose={closeGuide} />
             )}
           </div>
@@ -323,11 +352,8 @@ export default function GalleryPage() {
           </label>
           <button onClick={reset}>⌂ 로비로 이동</button>
         </div>
-        {guideMode === 'welcome' && (
-          <ControlsGuide variant="welcome" onClose={closeGuide} />
-        )}
         <MobileControls input={mobileInput} disabled={paused} />
-        {nearBook && !paused && guideMode !== 'compact' && (
+        {nearBook && !paused && !showControls && (
           <button className="book-interact" onClick={() => setGuestbook(true)}>
             <span>펼쳐진 방명록</span>책 열기 <kbd>E</kbd>
           </button>
@@ -368,6 +394,13 @@ export default function GalleryPage() {
         )}
         {guestbook && <Guestbook onClose={() => setGuestbook(false)} />}
       </div>
+      {editingAvatar && (
+        <AvatarPicker
+          initial={avatar}
+          onConfirm={enterGallery}
+          onCancel={() => setEditingAvatar(false)}
+        />
+      )}
     </main>
   );
 }

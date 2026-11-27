@@ -1,8 +1,24 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
+import { PerspectiveCamera } from 'three';
 import { avatarChoice, DEFAULT_AVATAR, HAIRSTYLES, type AvatarChoice, type AvatarGender } from '../avatar';
 import Character from './Character';
 import './avatarPicker.css';
+
+function PreviewCamera({ santaHat }: { santaHat: boolean }) {
+  const { camera, invalidate } = useThree();
+
+  useLayoutEffect(() => {
+    if (!(camera instanceof PerspectiveCamera)) return;
+    camera.fov = santaHat ? 32 : 29;
+    camera.position.set(0, santaHat ? 1.27 : 1.19, -4.9);
+    camera.lookAt(0, santaHat ? 1.13 : 1.05, 0);
+    camera.updateProjectionMatrix();
+    invalidate();
+  }, [camera, invalidate, santaHat]);
+
+  return null;
+}
 
 export default function AvatarPicker({
   initial,
@@ -87,9 +103,8 @@ export default function AvatarPicker({
             style={{ position: 'absolute', inset: 0 }}
             frameloop="demand"
             dpr={[1, 1.5]}
-            camera={{ position: [0, 1.19, -4.9], fov: 29 }}
-            onCreated={({ camera }) => camera.lookAt(0, 1.05, 0)}
           >
+            <PreviewCamera santaHat={choice.santaHat} />
             <ambientLight intensity={.45} />
             <hemisphereLight args={['#fff8f6', '#e1b9ac', 1.4]} />
             <directionalLight position={[2.4, 4.1, -4.5]} intensity={2.1} color="#fff8f6" />
@@ -100,6 +115,16 @@ export default function AvatarPicker({
             </group>
           </Canvas>
         </div>
+        <button
+          type="button"
+          className="avatar-hat-toggle"
+          aria-label="산타모자"
+          aria-pressed={choice.santaHat}
+          title="산타모자"
+          onClick={() => setChoice((current) => ({ ...current, santaHat: !current.santaHat }))}
+        >
+          <span className="avatar-hat-icon" aria-hidden="true"><span /></span>
+        </button>
         <form
           className="avatar-options"
           onSubmit={(event) => {
@@ -116,7 +141,7 @@ export default function AvatarPicker({
                     type="radio"
                     name="avatar-gender"
                     checked={choice.gender === gender}
-                    onChange={() => setChoice(avatarChoice(gender, initial?.hair))}
+                    onChange={() => setChoice((current) => avatarChoice(gender, initial?.hair, current.santaHat))}
                   />
                   <span>{gender === 'male' ? '남' : '여'}</span>
                 </label>
@@ -132,7 +157,7 @@ export default function AvatarPicker({
                     type="radio"
                     name="avatar-hair"
                     checked={choice.hair === id}
-                    onChange={() => setChoice(avatarChoice(choice.gender, id))}
+                    onChange={() => setChoice((current) => avatarChoice(current.gender, id, current.santaHat))}
                   />
                   <span>{label}</span>
                 </label>

@@ -21,26 +21,30 @@ export type AvatarChoice = {
   [Gender in AvatarGender]: {
     gender: Gender;
     hair: (typeof HAIRSTYLES)[Gender][number]['id'];
+    santaHat: boolean;
   };
 }[AvatarGender];
 
 export const DEFAULT_AVATAR: AvatarChoice = {
   gender: 'male',
   hair: 'classic',
+  santaHat: false,
 };
 
 const STORAGE_KEY = 'gallery-avatar';
 
-export function avatarChoice(gender: AvatarGender, hair: unknown): AvatarChoice {
+export function avatarChoice(gender: AvatarGender, hair: unknown, santaHat = false): AvatarChoice {
   if (gender === 'male') {
     return {
       gender,
       hair: HAIRSTYLES.male.find((style) => style.id === hair)?.id ?? 'classic',
+      santaHat,
     };
   }
   return {
     gender,
     hair: HAIRSTYLES.female.find((style) => style.id === hair)?.id ?? 'bob',
+    santaHat,
   };
 }
 
@@ -48,7 +52,7 @@ export function loadAvatar(): AvatarChoice | null {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null');
     if (saved?.gender !== 'male' && saved?.gender !== 'female') return null;
-    const choice = avatarChoice(saved.gender, saved.hair);
+    const choice = avatarChoice(saved.gender, saved.hair, saved.santaHat === true);
     return choice.hair === saved.hair ? choice : null;
   } catch {
     return null;

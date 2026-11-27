@@ -68,6 +68,8 @@ export const plush = {
   blush: matte('#ed9686', '#fbccb5', .15, .00025),
   eyes: matte('#2e2424', '#887273', .05, 0),
   hair,
+  hatRed: matte('#bb2637', '#f58286', .51, .002),
+  hatFur: matte('#fff4e8', '#ffffff', .54, .0025),
   hoodie: matte('#f3d5c2', '#fff2e2', .43, .0018),
   trim: matte('#edcbb6', '#ffeddd', .4, .0018),
   cords: matte('#f8ded0', '#fff4e9', .4, .0013),

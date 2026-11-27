@@ -5,6 +5,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { DEFAULT_AVATAR, type AvatarChoice } from '../avatar';
 import type { CharacterMotion } from '../types';
 import AvatarHair from './AvatarHair';
+import SantaHat from './SantaHat';
 import { plush } from './avatarMaterials';
 
 type Point = [number, number, number];
@@ -176,7 +177,8 @@ export default function Character({
         </mesh>
         <group position={[0, .741, 0]} scale={[1, 1.12, 1]} ref={head} name="avatar-head">
           <PlushShape position={[0, .416, -.026]} size={[.473, .416, .375]} material={plush.skin} geometry={face} />
-          <AvatarHair style={avatar.hair} />
+          <AvatarHair style={avatar.hair} santaHat={avatar.santaHat} />
+          {avatar.santaHat && <SantaHat hair={avatar.hair} />}
           {[-1, 1].map((side) => (
             <group key={side}>
               <PlushShape position={[side * .453, .256, -.067]} size={[.105, .123, .097]} rotation={[0, side * -.22, side * .26]} material={plush.skin} />

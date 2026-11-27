@@ -76,6 +76,66 @@
   background: radial-gradient(ellipse, #5d536a55, transparent 69%);
 }
 
+.avatar-hat-toggle {
+  grid-area: stage;
+  place-self: start end;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: 9px;
+  padding: 0;
+  border: 1px solid #d8d3de;
+  border-radius: 11px;
+  background: #fff;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.avatar-hat-toggle[aria-pressed='true'] {
+  border-color: #a94a55;
+  background: #f9e4e7;
+  box-shadow: inset 0 0 0 1px #a94a55;
+}
+
+.avatar-hat-icon {
+  position: relative;
+  display: block;
+  width: 27px;
+  height: 24px;
+}
+
+.avatar-hat-icon::before {
+  position: absolute;
+  inset: 0;
+  background: #b83244;
+  clip-path: path('M 2 19 C 4 12 7 5 13 4 C 20 2 24 8 25 14 L 21 16 C 19 12 17 12 16 15 L 17 19 Z');
+  content: '';
+}
+
+.avatar-hat-icon::after,
+.avatar-hat-icon span {
+  position: absolute;
+  border: 1px solid #d8ced6;
+  background: #fffaf6;
+  content: '';
+}
+
+.avatar-hat-icon::after {
+  inset: auto auto 2px 1px;
+  width: 18px;
+  height: 6px;
+  border-radius: 4px;
+}
+
+.avatar-hat-icon span {
+  top: 12px;
+  right: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
 .avatar-options {
   grid-area: options;
   display: grid;
@@ -145,6 +205,7 @@
 }
 
 .avatar-choices input:focus-visible + span,
+.avatar-hat-toggle:focus-visible,
 .avatar-picker-actions button:focus-visible {
   outline: 2px solid #6e607f;
   outline-offset: 2px;

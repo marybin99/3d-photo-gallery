@@ -7,6 +7,7 @@ import {
 import { MarchingCubes } from 'three/addons/objects/MarchingCubes.js';
 import type { Hairstyle } from '../avatar';
 import { plush } from './avatarMaterials';
+import { fitHairUnderSantaHat } from './SantaHat';
 
 type Point = [number, number, number];
 type Lock = {
@@ -442,6 +443,8 @@ function addLock(field: Float32Array, strand: Float32Array, {
 }
 
 const hairGeometry = new Map<Hairstyle, BufferGeometry>();
+const fittedHairGeometry = new Map<Hairstyle, BufferGeometry>();
+const hairOffsetY = -.96;
 
 function geometryFor(style: Hairstyle) {
   const cached = hairGeometry.get(style);
@@ -477,11 +480,20 @@ function geometryFor(style: Hairstyle) {
   return geometry;
 }
 
-export default function AvatarHair({ style }: { style: Hairstyle }) {
+function geometryWithHat(style: Hairstyle) {
+  const cached = fittedHairGeometry.get(style);
+  if (cached) return cached;
+
+  const geometry = fitHairUnderSantaHat(geometryFor(style), style, hairOffsetY);
+  fittedHairGeometry.set(style, geometry);
+  return geometry;
+}
+
+export default function AvatarHair({ style, santaHat }: { style: Hairstyle; santaHat: boolean }) {
   return (
-    <group name={style} position={[0, -.96, 0]}>
+    <group name={style} position={[0, hairOffsetY, 0]}>
       <mesh castShadow>
-        <primitive object={geometryFor(style)} attach="geometry" />
+        <primitive object={santaHat ? geometryWithHat(style) : geometryFor(style)} attach="geometry" />
         <primitive object={plush.hair} attach="material" />
       </mesh>
       {style === 'braids' && [-1, 1].map((side) => (

@@ -25,6 +25,7 @@ import {
   desk,
 } from '../layout';
 import Character from './Character';
+import type { AvatarChoice } from '../avatar';
 import GalleryFox from './GalleryFox';
 import { companionViewObstacles } from '../companionInteraction';
 import { HAMSTER_COLLISION_SIZE, HAMSTER_PATCH, HAMSTER_START } from '../hamsterRoam';
@@ -212,6 +213,7 @@ const ImageFrame = memo(function ImageFrame({
   );
 });
 function Player({
+  avatar,
   pose,
   onPose,
   mobileInput,
@@ -220,6 +222,7 @@ function Player({
   foxBody,
   hamsterBody,
 }: {
+  avatar: AvatarChoice;
   pose: React.RefObject<Pose>;
   onPose: (p: Pose) => void;
   mobileInput: React.RefObject<MovementInput>;
@@ -394,8 +397,8 @@ function Player({
     }
   });
   return (
-    <group ref={body} position={[SPAWN.x, 0, SPAWN.z]}>
-      <Character motion={motion} />
+    <group ref={body} position={[SPAWN.x, 0, SPAWN.z]} scale={0.9}>
+      <Character avatar={avatar} motion={motion} />
     </group>
   );
 }
@@ -541,6 +544,7 @@ function Doorway({
   );
 }
 export default function Gallery({
+  avatar,
   artworks,
   roomNames,
   entranceColors,
@@ -558,6 +562,7 @@ export default function Gallery({
   videoPositions,
   layout,
 }: {
+  avatar: AvatarChoice;
   artworks: Artwork[];
   roomNames: RoomNames;
   entranceColors: Record<string, string | undefined>;
@@ -733,6 +738,7 @@ export default function Gallery({
         shortcut={foxShortcut}
       />
       <Player
+        avatar={avatar}
         pose={pose}
         onPose={onPose}
         mobileInput={mobileInput}
